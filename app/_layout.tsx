@@ -1,5 +1,3 @@
-//entry point for the app
-
 import { Colors } from "@/constants/theme";
 import { Stack } from "expo-router";
 import { MD3DarkTheme, PaperProvider } from "react-native-paper";
@@ -35,6 +33,8 @@ export default function RootLayout() {
     <PaperProvider theme={appTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack>
     </PaperProvider>
   );
