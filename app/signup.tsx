@@ -1,6 +1,6 @@
 import { StyleSheet, View, Text, TextInput, TouchableOpacity } from 'react-native';
 
-export default function HomeScreen() {
+export default function SignupScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
