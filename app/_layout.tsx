@@ -1,11 +1,10 @@
 //entry point for the app
 
 import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Stack } from "expo-router";
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
+import { MD3DarkTheme, PaperProvider } from "react-native-paper";
 
-//Colors hex values can be editied from /constants/theme.ts
+//Colors hex values can be edited from /constants/theme.ts
 // primary — buttons, FABs, active states
 // secondary — chips, secondary actions
 // background — screen background
@@ -13,36 +12,27 @@ import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 // error — input errors, destructive actions
 // onPrimary — text/icons on top of primary color
 // outline — borders, dividers
-const lightTheme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: Colors.light.tint,
-    secondary: Colors.light.icon,
-    background: Colors.light.background,
-    surface: Colors.light.background,
-    error: "#B3261E",
-  },
-};
-
-const darkTheme = {
+const appTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: Colors.dark.tint,
-    secondary: Colors.dark.icon,
-    background: Colors.dark.background,
-    surface: Colors.dark.background,
-    error: "#F2B8B5",
+    primary: Colors.primary,
+    onPrimary: Colors.text,
+    secondary: Colors.secondary,
+    onSecondary: Colors.text,
+    background: Colors.background,
+    surface: Colors.surface,
+    onBackground: Colors.text,
+    onSurface: Colors.text,
+    onSurfaceVariant: Colors.textMuted,
+    error: Colors.error,
+    outline: Colors.outline,
   },
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
-
   return (
-    <PaperProvider theme={theme}>
+    <PaperProvider theme={appTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
