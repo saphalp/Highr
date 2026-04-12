@@ -1,0 +1,189 @@
+import { Colors } from "@/constants/theme";
+import {
+  ApplicantProfile,
+  EducationEntry,
+  EMPTY_PROFILE,
+  ExperienceEntry,
+  SkillEntry,
+} from "@/types/applicant";
+import React, { useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Button, ProgressBar, Text } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ApplicantAdditionalInfo from "./ProfileSetup/ApplicantAdditionalInfo";
+import ApplicantBasicInfo from "./ProfileSetup/ApplicantBasicInfo";
+import ApplicantEducation from "./ProfileSetup/ApplicantEducation";
+import ApplicantExperience from "./ProfileSetup/ApplicantExperience";
+import ApplicantSkills from "./ProfileSetup/ApplicantSkills";
+
+const TOTAL_STEPS = 5;
+
+const STEP_LABELS = [
+  "Basic Info",
+  "Education",
+  "Experience",
+  "Skills",
+  "Additional Info",
+];
+
+export default function ApplicantSetup() {
+  const [step, setStep] = useState(1);
+  const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
+  const handleNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const handleBack = () => setStep((s) => Math.max(s - 1, 1));
+  const updateProfile = (fields: Partial<ApplicantProfile>) => {
+    setProfile((prev) => ({ ...prev, ...fields }));
+  };
+
+  const addEntry = <K extends "education" | "experience" | "skills">(
+    key: K,
+    entry: ApplicantProfile[K][number],
+  ) => {
+    setProfile((prev) => ({
+      ...prev,
+      [key]: [entry, ...prev[key]],
+    }));
+  };
+
+  const removeEntry = (
+    key: "education" | "experience" | "skills",
+    index: number,
+  ) => {
+    setProfile((prev) => ({
+      ...prev,
+      [key]: prev[key].filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.progressSection}>
+        <Text style={styles.stepLabel}>
+          Step {step} of {TOTAL_STEPS}
+        </Text>
+        <ProgressBar
+          progress={step / TOTAL_STEPS}
+          color={Colors.secondary}
+          style={styles.progressBar}
+        />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        {step === 1 && (
+          <ApplicantBasicInfo data={profile} onChange={updateProfile} />
+        )}
+        {step === 2 && (
+          <ApplicantEducation
+            entries={profile.education}
+            onAdd={(entry: EducationEntry) => addEntry("education", entry)}
+            onRemove={(i) => removeEntry("education", i)}
+          />
+        )}
+        {step === 3 && (
+          <ApplicantExperience
+            entries={profile.experience}
+            onAdd={(entry: ExperienceEntry) => addEntry("experience", entry)}
+            onRemove={(i) => removeEntry("experience", i)}
+          />
+        )}
+        {step === 4 && (
+          <ApplicantSkills
+            entries={profile.skills}
+            onAdd={(entry: SkillEntry) => addEntry("skills", entry)}
+            onRemove={(i) => removeEntry("skills", i)}
+          />
+        )}
+        {step === 5 && (
+          <ApplicantAdditionalInfo data={profile} onChange={updateProfile} />
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {step > 1 && (
+          <Button
+            mode="outlined"
+            onPress={handleBack}
+            contentStyle={styles.backBtn}
+            labelStyle={styles.backBtnLabel}
+            style={styles.backBtnContainer}
+          >
+            Back
+          </Button>
+        )}
+        <Button
+          mode="contained"
+          onPress={handleNext}
+          contentStyle={styles.nextBtn}
+          labelStyle={styles.nextBtnLabel}
+          style={styles.nextBtnContainer}
+        >
+          {step === TOTAL_STEPS ? "Finish" : "Next"}
+        </Button>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  progressSection: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 5,
+  },
+  stepLabel: {
+    color: Colors.textMuted,
+    fontSize: 13,
+  },
+  stepName: {
+    color: Colors.secondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.outline,
+  },
+  scroll: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outline,
+    backgroundColor: Colors.background,
+    flexDirection: "row",
+    gap: 10,
+  },
+  backBtnContainer: {
+    flex: 1,
+    borderColor: Colors.outline,
+    borderRadius: 8,
+  },
+  backBtn: {
+    paddingVertical: 6,
+  },
+  backBtnLabel: {
+    fontSize: 16,
+    color: Colors.textMuted,
+  },
+  nextBtnContainer: {
+    flex: 2,
+    borderRadius: 8,
+  },
+  nextBtn: {
+    paddingVertical: 6,
+  },
+  nextBtnLabel: {
+    fontSize: 18,
+  },
+});
