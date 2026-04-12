@@ -1,15 +1,16 @@
 import { Colors } from "@/constants/theme";
+import { ApplicantProfile } from "@/types/applicant";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 
-export default function ApplicantBasicInfo() {
-  const [fName, setFName] = useState("");
-  const [lName, setLName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+type Props = {
+  data: Pick<ApplicantProfile, "fName" | "lName" | "phone" | "address">;
+  onChange: (fields: Partial<ApplicantProfile>) => void;
+};
 
+export default function ApplicantBasicInfo({ data, onChange }: Props) {
   return (
     <View>
       <Text variant="headlineMedium" style={styles.header}>
@@ -24,30 +25,30 @@ export default function ApplicantBasicInfo() {
 
       <TextInput
         label="First Name"
-        value={fName}
-        onChangeText={setFName}
+        value={data.fName}
+        onChangeText={(v) => onChange({ fName: v })}
         mode="outlined"
         style={styles.input}
       />
       <TextInput
         label="Last Name"
-        value={lName}
-        onChangeText={setLName}
+        value={data.lName}
+        onChangeText={(v) => onChange({ lName: v })}
         mode="outlined"
         style={styles.input}
       />
       <TextInput
         label="Phone Number"
-        value={phone}
-        onChangeText={setPhone}
+        value={data.phone}
+        onChangeText={(v) => onChange({ phone: v })}
         mode="outlined"
         keyboardType="phone-pad"
         style={styles.input}
       />
       <TextInput
         label="Address"
-        value={address}
-        onChangeText={setAddress}
+        value={data.address}
+        onChangeText={(v) => onChange({ address: v })}
         mode="outlined"
         style={styles.input}
       />
