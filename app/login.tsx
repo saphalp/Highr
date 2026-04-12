@@ -1,22 +1,25 @@
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Image } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
-export default function SignupScreen() {
+export default function LoginScreen() {
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join Highr today</Text>
+      <View style={styles.characterContainer}>
+        <Image
+          source={require('@/assets/images/characters.png')}
+          style={styles.characters}
+          resizeMode="contain"
+        />
+      </View>
 
-      <TextInput
-        label="Username"
-        mode="outlined"
-        style={styles.input}
-        textColor="#fff"
-        theme={{ colors: { primary: '#6C63FF', onSurfaceVariant: '#888' }}}
-      />
+      <Text style={styles.title}>Welcome back!</Text>
+      <Text style={styles.subtitle}>Please enter your details</Text>
+
       <TextInput
         label="Email"
         mode="outlined"
@@ -27,15 +30,13 @@ export default function SignupScreen() {
       <TextInput
         label="Password"
         mode="outlined"
-        secureTextEntry
-        style={styles.input}
-        textColor="#fff"
-        theme={{ colors: { primary: '#6C63FF', onSurfaceVariant: '#888' }}}
-      />
-      <TextInput
-        label="Confirm Password"
-        mode="outlined"
-        secureTextEntry
+        secureTextEntry={!showPassword}
+        right={
+          <TextInput.Icon
+            icon={showPassword ? 'eye' : 'eye-off'}
+            onPress={() => setShowPassword(!showPassword)}
+          />
+        }
         style={styles.input}
         textColor="#fff"
         theme={{ colors: { primary: '#6C63FF', onSurfaceVariant: '#888' }}}
@@ -43,26 +44,16 @@ export default function SignupScreen() {
 
       <Button
         mode="contained"
-        style={styles.buttonPrimary}
+        style={styles.button}
         labelStyle={styles.buttonText}
-        onPress={() => router.push('/login')}
       >
-        Sign Up as Job Seeker
+        LOG IN
       </Button>
 
-      <Button
-        mode="contained"
-        style={styles.buttonSecondary}
-        labelStyle={styles.buttonText}
-        onPress={() => router.push('/login')}
-      >
-        Sign Up as Employer
-      </Button>
-
-      <Text style={styles.loginLink}>
-        Already have an account?{' '}
-        <Text style={styles.loginLinkBold} onPress={() => router.push('/login')}>
-          Log in
+      <Text style={styles.signupLink}>
+        Don't have an account?{' '}
+        <Text style={styles.signupLinkBold} onPress={() => router.push('/signup')}>
+          Sign up
         </Text>
       </Text>
     </View>
@@ -75,6 +66,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A2E',
     padding: 24,
     justifyContent: 'center',
+  },
+  characterContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#1A1A2E',
+  },
+  characters: {
+    width: 250,
+    height: 150,
   },
   title: {
     color: '#fff',
@@ -93,14 +93,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E2E3E',
     marginBottom: 12,
   },
-  buttonPrimary: {
+  button: {
     backgroundColor: '#6C63FF',
-    borderRadius: 8,
-    marginBottom: 12,
-    padding: 4,
-  },
-  buttonSecondary: {
-    backgroundColor: '#4B45A1',
     borderRadius: 8,
     marginBottom: 24,
     padding: 4,
@@ -110,12 +104,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  loginLink: {
+  signupLink: {
     color: '#888',
     textAlign: 'center',
     fontSize: 14,
   },
-  loginLinkBold: {
+  signupLinkBold: {
     color: '#6C63FF',
     fontWeight: 'bold',
   },
