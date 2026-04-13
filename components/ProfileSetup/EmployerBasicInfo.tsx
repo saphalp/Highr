@@ -8,7 +8,7 @@ import UploadProfileImage from "./UploadProfileImage";
 type Props = {
   data: Pick<
     EmployerProfile,
-    "contactName" | "contactTitle" | "contactPhone" | "companyName"
+    "profileImageUri" | "contactName" | "contactTitle" | "contactPhone" | "companyName"
   >;
   onChange: (fields: Partial<EmployerProfile>) => void;
 };
@@ -19,7 +19,10 @@ export default function EmployerBasicInfo({ data, onChange }: Props) {
       <Text variant="headlineMedium" style={styles.header}>
         Basic Info
       </Text>
-      <UploadProfileImage />
+      <UploadProfileImage
+        uri={data.profileImageUri}
+        onChangeUri={(uri) => onChange({ profileImageUri: uri })}
+      />
 
       <Text style={styles.sectionLabel}>Your Details</Text>
       <TextInput

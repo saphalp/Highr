@@ -6,7 +6,7 @@ import { Text, TextInput } from "react-native-paper";
 import UploadProfileImage from "./UploadProfileImage";
 
 type Props = {
-  data: Pick<ApplicantProfile, "fName" | "lName" | "phone" | "address">;
+  data: Pick<ApplicantProfile, "profileImageUri" | "fName" | "lName" | "phone" | "address">;
   onChange: (fields: Partial<ApplicantProfile>) => void;
 };
 
@@ -16,7 +16,10 @@ export default function ApplicantBasicInfo({ data, onChange }: Props) {
       <Text variant="headlineMedium" style={styles.header}>
         Basic Info
       </Text>
-      <UploadProfileImage />
+      <UploadProfileImage
+        uri={data.profileImageUri}
+        onChangeUri={(uri) => onChange({ profileImageUri: uri })}
+      />
       <TextInput
         label="First Name"
         value={data.fName}

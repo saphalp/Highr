@@ -9,6 +9,7 @@ export type CompanySize =
 
 export type EmployerProfile = {
   // Basic Info
+  profileImageUri: string;
   contactName: string;
   contactTitle: string;
   contactPhone: string;
@@ -30,6 +31,7 @@ export type EmployerProfile = {
 };
 
 export const EMPTY_EMPLOYER_PROFILE: EmployerProfile = {
+  profileImageUri: "",
   contactName: "",
   contactTitle: "",
   contactPhone: "",

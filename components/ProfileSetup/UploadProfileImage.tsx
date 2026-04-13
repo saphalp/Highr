@@ -1,12 +1,15 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function UploadProfileImage() {
-  const [imageUri, setImageUri] = useState<string | null>(null);
+type Props = {
+  uri: string;
+  onChangeUri: (uri: string) => void;
+};
 
+export default function UploadProfileImage({ uri, onChangeUri }: Props) {
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -20,7 +23,7 @@ export default function UploadProfileImage() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      onChangeUri(result.assets[0].uri);
     }
   };
 
@@ -37,7 +40,7 @@ export default function UploadProfileImage() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      onChangeUri(result.assets[0].uri);
     }
   };
 
@@ -56,8 +59,8 @@ export default function UploadProfileImage() {
       onPress={handlePress}
     >
       <View style={styles.avatar}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.avatarImage} />
+        {uri ? (
+          <Image source={{ uri }} style={styles.avatarImage} />
         ) : (
           <Ionicons name="camera-outline" size={32} color={Colors.textMuted} />
         )}

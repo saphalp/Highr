@@ -25,6 +25,7 @@ export type SkillEntry = {
 };
 
 export type ApplicantProfile = {
+  profileImageUri: string;
   fName: string;
   lName: string;
   phone: string;
@@ -39,6 +40,7 @@ export type ApplicantProfile = {
 };
 
 export const EMPTY_PROFILE: ApplicantProfile = {
+  profileImageUri: "",
   fName: "",
   lName: "",
   phone: "",
