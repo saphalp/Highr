@@ -1,9 +1,9 @@
 import { Colors } from "@/constants/theme";
 import { ApplicantProfile } from "@/types/applicant";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
+import UploadProfileImage from "./UploadProfileImage";
 
 type Props = {
   data: Pick<ApplicantProfile, "fName" | "lName" | "phone" | "address">;
@@ -16,13 +16,7 @@ export default function ApplicantBasicInfo({ data, onChange }: Props) {
       <Text variant="headlineMedium" style={styles.header}>
         Basic Info
       </Text>
-      <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.7}>
-        <View style={styles.avatar}>
-          <Ionicons name="camera-outline" size={32} color={Colors.textMuted} />
-        </View>
-        <Text style={styles.avatarLabel}>Upload Profile Photo</Text>
-      </TouchableOpacity>
-
+      <UploadProfileImage />
       <TextInput
         label="First Name"
         value={data.fName}
@@ -62,26 +56,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: Colors.text,
     textAlign: "center",
-  },
-  avatarContainer: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.inputBackground,
-    borderWidth: 2,
-    borderColor: Colors.outline,
-    borderStyle: "dashed",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  avatarLabel: {
-    color: Colors.textMuted,
-    fontSize: 13,
   },
   input: {
     marginBottom: 12,
