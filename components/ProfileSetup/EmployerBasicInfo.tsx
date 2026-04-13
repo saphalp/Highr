@@ -1,54 +1,61 @@
 import { Colors } from "@/constants/theme";
-import { ApplicantProfile } from "@/types/applicant";
+import { EmployerProfile } from "@/types/employer";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 
 type Props = {
-  data: Pick<ApplicantProfile, "fName" | "lName" | "phone" | "address">;
-  onChange: (fields: Partial<ApplicantProfile>) => void;
+  data: Pick<
+    EmployerProfile,
+    "contactName" | "contactTitle" | "contactPhone" | "companyName"
+  >;
+  onChange: (fields: Partial<EmployerProfile>) => void;
 };
 
-export default function ApplicantBasicInfo({ data, onChange }: Props) {
+export default function EmployerBasicInfo({ data, onChange }: Props) {
   return (
     <View>
       <Text variant="headlineMedium" style={styles.header}>
         Basic Info
       </Text>
-      <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.7}>
-        <View style={styles.avatar}>
+
+      <TouchableOpacity style={styles.logoContainer} activeOpacity={0.7}>
+        <View style={styles.logo}>
           <Ionicons name="camera-outline" size={32} color={Colors.textMuted} />
         </View>
-        <Text style={styles.avatarLabel}>Upload Profile Photo</Text>
+        <Text style={styles.logoLabel}>Upload Profile Photo</Text>
       </TouchableOpacity>
 
+      <Text style={styles.sectionLabel}>Your Details</Text>
       <TextInput
-        label="First Name"
-        value={data.fName}
-        onChangeText={(v) => onChange({ fName: v })}
+        label="Your Name"
+        value={data.contactName}
+        onChangeText={(v) => onChange({ contactName: v })}
         mode="outlined"
         style={styles.input}
       />
       <TextInput
-        label="Last Name"
-        value={data.lName}
-        onChangeText={(v) => onChange({ lName: v })}
+        label="Your Title (e.g. HR Manager, Founder)"
+        value={data.contactTitle}
+        onChangeText={(v) => onChange({ contactTitle: v })}
         mode="outlined"
         style={styles.input}
       />
       <TextInput
         label="Phone Number"
-        value={data.phone}
-        onChangeText={(v) => onChange({ phone: v })}
+        value={data.contactPhone}
+        onChangeText={(v) => onChange({ contactPhone: v })}
         mode="outlined"
         keyboardType="phone-pad"
         style={styles.input}
       />
+
+      <Text style={styles.sectionLabel}>Company</Text>
       <TextInput
-        label="Address"
-        value={data.address}
-        onChangeText={(v) => onChange({ address: v })}
+        label="Company Name"
+        value={data.companyName}
+        onChangeText={(v) => onChange({ companyName: v })}
         mode="outlined"
         style={styles.input}
       />
@@ -63,11 +70,11 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: "center",
   },
-  avatarContainer: {
+  logoContainer: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 28,
   },
-  avatar: {
+  logo: {
     width: 96,
     height: 96,
     borderRadius: 48,
@@ -79,9 +86,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  avatarLabel: {
+  logoLabel: {
     color: Colors.textMuted,
     fontSize: 13,
+  },
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   input: {
     marginBottom: 12,

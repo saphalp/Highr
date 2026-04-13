@@ -1,7 +1,8 @@
-import { StyleSheet, View, Text, Image } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import { Colors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { Button, TextInput } from 'react-native-paper';
 
 export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,8 +25,8 @@ export default function LoginScreen() {
         label="Email"
         mode="outlined"
         style={styles.input}
-        textColor="#fff"
-        theme={{ colors: { primary: '#6C63FF', onSurfaceVariant: '#888' }}}
+        textColor={Colors.text}
+        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
       />
       <TextInput
         label="Password"
@@ -38,8 +39,8 @@ export default function LoginScreen() {
           />
         }
         style={styles.input}
-        textColor="#fff"
-        theme={{ colors: { primary: '#6C63FF', onSurfaceVariant: '#888' }}}
+        textColor={Colors.text}
+        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
       />
 
       <Button
@@ -63,54 +64,54 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.background,
     padding: 24,
     justifyContent: 'center',
   },
   characterContainer: {
     alignItems: 'center',
     marginBottom: 16,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.background,
   },
   characters: {
     width: 250,
     height: 150,
   },
   title: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#888',
+    color: Colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 32,
   },
   input: {
-    backgroundColor: '#2E2E3E',
+    backgroundColor: Colors.inputBackground,
     marginBottom: 12,
   },
   button: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     marginBottom: 24,
     padding: 4,
   },
   buttonText: {
-    color: '#fff',
+    color: Colors.text,
     fontWeight: 'bold',
     fontSize: 16,
   },
   signupLink: {
-    color: '#888',
+    color: Colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },
   signupLinkBold: {
-    color: '#6C63FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
 });

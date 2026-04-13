@@ -1,21 +1,16 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from "react-native";
 
 export const Colors = {
-  background: "#0B0F2A",       // blackish blue screen background
-  surface: "#131729",          // slightly lighter for cards/sheets
-  inputBackground: "#1E2235",  // muted gray-blue for input fields
-  text: "#FFFFFF",             // primary text
-  textMuted: "#A0A8C0",        // secondary/placeholder text
-  primary: "#0D2B6E",          // navy blue — primary buttons
-  secondary: "#8B6FD4",        // lighter purple — secondary actions
+  background: "#1A1A2E", // deep navy — main screen background
+  surface: "#212140", // slightly lighter for cards/sheets
+  inputBackground: "#2E2E3E", // muted dark for input fields
+  text: "#FFFFFF", // primary text
+  textMuted: "#888888", // secondary/placeholder text
+  primary: "#6C63FF", // purple — primary buttons & accents
+  secondary: "#4B45A1", // darker purple — secondary actions
   error: "#F2B8B5",
-  outline: "#2E3355",          // borders/dividers
-  icon: "#A0A8C0",
+  outline: "#2A2A40", // borders/dividers
+  icon: "#888888",
 };
 
 export const Fonts = Platform.select({
