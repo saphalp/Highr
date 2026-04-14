@@ -5,11 +5,11 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 
 const characterImages = [
-  require('@/assets/images/characters.png'),
-  require('@/assets/images/character2.png'),
-  require('@/assets/images/character3.png'),
-  require('@/assets/images/character4.png'),
-  require('@/assets/images/character5.png'),
+  require('@/assets/images/characters.png'),   // 0 - default
+  require('@/assets/images/character2.png'),   // 1
+  require('@/assets/images/character3.png'),   // 2
+  require('@/assets/images/character4.png'),   // 3 - stop here
+  require('@/assets/images/character5.png'),   // 4 - looking down
 ];
 
 export default function LoginScreen() {
@@ -20,18 +20,22 @@ export default function LoginScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
     if (showPassword) {
+      // animate from frame 1 to 3 and stop
       let current = 1;
       setFrameIndex(1);
       intervalRef.current = setInterval(() => {
         current += 1;
         setFrameIndex(current);
-        if (current >= 3) clearInterval(intervalRef.current!);
+        if (current >= 3) {
+          clearInterval(intervalRef.current!);
+        }
       }, 200);
     } else if (isFocused) {
+      // looking down when field is focused
       setFrameIndex(4);
     } else {
+      // default
       setFrameIndex(0);
     }
     return () => {
