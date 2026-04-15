@@ -29,8 +29,13 @@ const STEP_LABELS = [
 export default function ApplicantSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
-  const handleNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  const handleBack = () => setStep((s) => Math.max(s - 1, 1));
+  const handleNext = () => {
+    if (step==TOTAL_STEPS){
+      //upload image to supabase bucket
+    }
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS))
+  };
+  const handleBack = () => {setStep((s) => Math.max(s - 1, 1));
   const updateProfile = (fields: Partial<ApplicantProfile>) => {
     setProfile((prev) => ({ ...prev, ...fields }));
   };

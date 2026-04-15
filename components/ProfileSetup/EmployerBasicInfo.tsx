@@ -1,14 +1,14 @@
 import { Colors } from "@/constants/theme";
 import { EmployerProfile } from "@/types/employer";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
+import UploadProfileImage from "./UploadProfileImage";
 
 type Props = {
   data: Pick<
     EmployerProfile,
-    "contactName" | "contactTitle" | "contactPhone" | "companyName"
+    "profileImageUri" | "contactName" | "contactTitle" | "contactPhone" | "companyName"
   >;
   onChange: (fields: Partial<EmployerProfile>) => void;
 };
@@ -19,13 +19,10 @@ export default function EmployerBasicInfo({ data, onChange }: Props) {
       <Text variant="headlineMedium" style={styles.header}>
         Basic Info
       </Text>
-
-      <TouchableOpacity style={styles.logoContainer} activeOpacity={0.7}>
-        <View style={styles.logo}>
-          <Ionicons name="camera-outline" size={32} color={Colors.textMuted} />
-        </View>
-        <Text style={styles.logoLabel}>Upload Profile Photo</Text>
-      </TouchableOpacity>
+      <UploadProfileImage
+        uri={data.profileImageUri}
+        onChangeUri={(uri) => onChange({ profileImageUri: uri })}
+      />
 
       <Text style={styles.sectionLabel}>Your Details</Text>
       <TextInput
@@ -69,26 +66,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: Colors.text,
     textAlign: "center",
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  logo: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.inputBackground,
-    borderWidth: 2,
-    borderColor: Colors.outline,
-    borderStyle: "dashed",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  logoLabel: {
-    color: Colors.textMuted,
-    fontSize: 13,
   },
   sectionLabel: {
     color: Colors.textMuted,
