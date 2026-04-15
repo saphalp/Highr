@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import {
   ApplicantProfile,
   EducationEntry,
@@ -6,6 +7,7 @@ import {
   ExperienceEntry,
   SkillEntry,
 } from "@/types/applicant";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, ProgressBar, Text } from "react-native-paper";
@@ -29,107 +31,114 @@ const STEP_LABELS = [
 export default function ApplicantSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
-  const handleNext = () => {
-    if (step==TOTAL_STEPS){
-      //upload image to supabase bucket
+  const handleNext = async () => {
+    if (step == TOTAL_STEPS) {
+      const { data, error } = await supabase.storage
+        .from("avatars")
+        .upload("applicant/1.jpeg", profile.profileImageUri);
+      if (!error) {
+        router.push("/discover");
+      }
     }
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS))
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
-  const handleBack = () => {setStep((s) => Math.max(s - 1, 1));
-  const updateProfile = (fields: Partial<ApplicantProfile>) => {
-    setProfile((prev) => ({ ...prev, ...fields }));
-  };
+  const handleBack = () => {
+    setStep((s) => Math.max(s - 1, 1));
+    const updateProfile = (fields: Partial<ApplicantProfile>) => {
+      setProfile((prev) => ({ ...prev, ...fields }));
+    };
 
-  const addEntry = <K extends "education" | "experience" | "skills">(
-    key: K,
-    entry: ApplicantProfile[K][number],
-  ) => {
-    setProfile((prev) => ({
-      ...prev,
-      [key]: [entry, ...prev[key]],
-    }));
-  };
+    const addEntry = <K extends "education" | "experience" | "skills">(
+      key: K,
+      entry: ApplicantProfile[K][number],
+    ) => {
+      setProfile((prev) => ({
+        ...prev,
+        [key]: [entry, ...prev[key]],
+      }));
+    };
 
-  const removeEntry = (
-    key: "education" | "experience" | "skills",
-    index: number,
-  ) => {
-    setProfile((prev) => ({
-      ...prev,
-      [key]: prev[key].filter((_, i) => i !== index),
-    }));
-  };
+    const removeEntry = (
+      key: "education" | "experience" | "skills",
+      index: number,
+    ) => {
+      setProfile((prev) => ({
+        ...prev,
+        [key]: prev[key].filter((_, i) => i !== index),
+      }));
+    };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.progressSection}>
-        <Text style={styles.stepLabel}>
-          Step {step} of {TOTAL_STEPS}
-        </Text>
-        <ProgressBar
-          progress={step / TOTAL_STEPS}
-          color={Colors.secondary}
-          style={styles.progressBar}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        {step === 1 && (
-          <ApplicantBasicInfo data={profile} onChange={updateProfile} />
-        )}
-        {step === 2 && (
-          <ApplicantEducation
-            entries={profile.education}
-            onAdd={(entry: EducationEntry) => addEntry("education", entry)}
-            onRemove={(i) => removeEntry("education", i)}
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.progressSection}>
+          <Text style={styles.stepLabel}>
+            Step {step} of {TOTAL_STEPS}
+          </Text>
+          <ProgressBar
+            progress={step / TOTAL_STEPS}
+            color={Colors.secondary}
+            style={styles.progressBar}
           />
-        )}
-        {step === 3 && (
-          <ApplicantExperience
-            entries={profile.experience}
-            onAdd={(entry: ExperienceEntry) => addEntry("experience", entry)}
-            onRemove={(i) => removeEntry("experience", i)}
-          />
-        )}
-        {step === 4 && (
-          <ApplicantSkills
-            entries={profile.skills}
-            onAdd={(entry: SkillEntry) => addEntry("skills", entry)}
-            onRemove={(i) => removeEntry("skills", i)}
-          />
-        )}
-        {step === 5 && (
-          <ApplicantAdditionalInfo data={profile} onChange={updateProfile} />
-        )}
-      </ScrollView>
+        </View>
 
-      <View style={styles.footer}>
-        {step > 1 && (
-          <Button
-            mode="outlined"
-            onPress={handleBack}
-            contentStyle={styles.backBtn}
-            labelStyle={styles.backBtnLabel}
-            style={styles.backBtnContainer}
-          >
-            Back
-          </Button>
-        )}
-        <Button
-          mode="contained"
-          onPress={handleNext}
-          contentStyle={styles.nextBtn}
-          labelStyle={styles.nextBtnLabel}
-          style={styles.nextBtnContainer}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
         >
-          {step === TOTAL_STEPS ? "Finish" : "Next"}
-        </Button>
-      </View>
-    </SafeAreaView>
-  );
+          {step === 1 && (
+            <ApplicantBasicInfo data={profile} onChange={updateProfile} />
+          )}
+          {step === 2 && (
+            <ApplicantEducation
+              entries={profile.education}
+              onAdd={(entry: EducationEntry) => addEntry("education", entry)}
+              onRemove={(i) => removeEntry("education", i)}
+            />
+          )}
+          {step === 3 && (
+            <ApplicantExperience
+              entries={profile.experience}
+              onAdd={(entry: ExperienceEntry) => addEntry("experience", entry)}
+              onRemove={(i) => removeEntry("experience", i)}
+            />
+          )}
+          {step === 4 && (
+            <ApplicantSkills
+              entries={profile.skills}
+              onAdd={(entry: SkillEntry) => addEntry("skills", entry)}
+              onRemove={(i) => removeEntry("skills", i)}
+            />
+          )}
+          {step === 5 && (
+            <ApplicantAdditionalInfo data={profile} onChange={updateProfile} />
+          )}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          {step > 1 && (
+            <Button
+              mode="outlined"
+              onPress={handleBack}
+              contentStyle={styles.backBtn}
+              labelStyle={styles.backBtnLabel}
+              style={styles.backBtnContainer}
+            >
+              Back
+            </Button>
+          )}
+          <Button
+            mode="contained"
+            onPress={handleNext}
+            contentStyle={styles.nextBtn}
+            labelStyle={styles.nextBtnLabel}
+            style={styles.nextBtnContainer}
+          >
+            {step === TOTAL_STEPS ? "Finish" : "Next"}
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  };
 }
 
 const styles = StyleSheet.create({
