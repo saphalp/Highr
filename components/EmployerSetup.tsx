@@ -1,5 +1,8 @@
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import { EMPTY_EMPLOYER_PROFILE, EmployerProfile } from "@/types/employer";
+import { File } from "expo-file-system";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, ProgressBar, Text } from "react-native-paper";
@@ -19,9 +22,30 @@ const STEP_LABELS = [
 
 export default function EmployerSetup() {
   const [step, setStep] = useState(1);
-  const [profile, setProfile] = useState<EmployerProfile>(EMPTY_EMPLOYER_PROFILE);
+  const [profile, setProfile] = useState<EmployerProfile>(
+    EMPTY_EMPLOYER_PROFILE,
+  );
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const handleNext = async () => {
+    if (step == TOTAL_STEPS) {
+      const file = new File(profile.profileImageUri);
+      const bytes = await file.bytes();
+      const { error } = await supabase.storage
+        .from("profile_pictures")
+        .upload("/employers/1.jpeg", bytes, {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+      if (!error) {
+        router.push("/discover");
+      }
+      if (error) {
+        console.log("Error code:", error.name);
+      }
+      return;
+    }
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
   const handleBack = () => setStep((s) => Math.max(s - 1, 1));
 
   const updateProfile = (fields: Partial<EmployerProfile>) => {

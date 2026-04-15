@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import {
   ApplicantProfile,
   EducationEntry,
@@ -6,6 +7,8 @@ import {
   ExperienceEntry,
   SkillEntry,
 } from "@/types/applicant";
+import { File } from "expo-file-system";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, ProgressBar, Text } from "react-native-paper";
@@ -29,13 +32,30 @@ const STEP_LABELS = [
 export default function ApplicantSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
-  const handleNext = () => {
-    if (step==TOTAL_STEPS){
-      //upload image to supabase bucket
+  const handleNext = async () => {
+    if (step == TOTAL_STEPS) {
+      const file = new File(profile.profileImageUri);
+      const bytes = await file.bytes();
+      const { error } = await supabase.storage
+        .from("profile_pictures")
+        .upload("/applicants/1.jpeg", bytes, {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+      if (!error) {
+        router.push("/discover");
+      }
+      if (error) {
+        console.log("Error code:", error.name);
+      }
+      return;
     }
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS))
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
-  const handleBack = () => {setStep((s) => Math.max(s - 1, 1));
+  const handleBack = () => {
+    setStep((s) => Math.max(s - 1, 1));
+  };
+
   const updateProfile = (fields: Partial<ApplicantProfile>) => {
     setProfile((prev) => ({ ...prev, ...fields }));
   };
