@@ -1,29 +1,78 @@
-import { Colors } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import MessageBar from "@/components/MessageBar";
+import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Button, TextInput } from "react-native-paper";
 
 export default function SignupScreen() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"info" | "error">("info");
 
+  const handleSignUpApplicant = async () => {
+    if (password !== confirmPassword) {
+      setMessageType("error");
+      setMessage("Passwords do not match.");
+      return;
+    }
+    const { error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: { data: { role: "applicant" } },
+    });
+    if (error) {
+      setMessageType("error");
+      setMessage(error.message);
+      return;
+    }
+    setMessageType("info");
+    setMessage(`Confirmation link sent to ${email}`);
+    router.push("/login");
+  };
+
+  const handleSignUpEmployer = async () => {
+    if (password !== confirmPassword) {
+      setMessageType("error");
+      setMessage("Passwords do not match.");
+      return;
+    }
+    const { error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: { data: { role: "employer" } },
+    });
+    if (error) {
+      setMessageType("error");
+      setMessage(error.message);
+      return;
+    }
+    setMessageType("info");
+    setMessage(`Confirmation link sent to ${email}`);
+    router.push("/login");
+  };
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Join Highr today</Text>
 
       <TextInput
-        label="Username"
-        mode="outlined"
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-      <TextInput
         label="Email"
         mode="outlined"
         style={styles.input}
         textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
+        value={email}
+        onChangeText={setEmail}
+        theme={{
+          colors: {
+            primary: Colors.primary,
+            onSurfaceVariant: Colors.textMuted,
+          },
+        }}
       />
       <TextInput
         label="Password"
@@ -31,7 +80,14 @@ export default function SignupScreen() {
         secureTextEntry
         style={styles.input}
         textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
+        value={password}
+        onChangeText={setPassword}
+        theme={{
+          colors: {
+            primary: Colors.primary,
+            onSurfaceVariant: Colors.textMuted,
+          },
+        }}
       />
       <TextInput
         label="Confirm Password"
@@ -39,14 +95,21 @@ export default function SignupScreen() {
         secureTextEntry
         style={styles.input}
         textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        theme={{
+          colors: {
+            primary: Colors.primary,
+            onSurfaceVariant: Colors.textMuted,
+          },
+        }}
       />
 
       <Button
         mode="contained"
         style={styles.buttonPrimary}
         labelStyle={styles.buttonText}
-        onPress={() => router.push('/login')}
+        onPress={handleSignUpApplicant}
       >
         Sign Up as Job Seeker
       </Button>
@@ -55,14 +118,19 @@ export default function SignupScreen() {
         mode="contained"
         style={styles.buttonSecondary}
         labelStyle={styles.buttonText}
-        onPress={() => router.push('/login')}
+        onPress={handleSignUpEmployer}
       >
         Sign Up as Employer
       </Button>
 
+      <MessageBar message={message} type={messageType} />
+
       <Text style={styles.loginLink}>
-        Already have an account?{' '}
-        <Text style={styles.loginLinkBold} onPress={() => router.push('/login')}>
+        Already have an account?{" "}
+        <Text
+          style={styles.loginLinkBold}
+          onPress={() => router.push("/login")}
+        >
           Log in
         </Text>
       </Text>
@@ -75,19 +143,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   title: {
     color: Colors.text,
     fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     color: Colors.textMuted,
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 32,
   },
   input: {
@@ -108,16 +176,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 16,
   },
   loginLink: {
     color: Colors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 14,
   },
   loginLinkBold: {
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
