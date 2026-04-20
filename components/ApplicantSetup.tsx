@@ -33,21 +33,56 @@ export default function ApplicantSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
   const handleNext = async () => {
-    if (step == TOTAL_STEPS) {
-      const file = new File(profile.profileImageUri);
-      const bytes = await file.bytes();
-      const { error } = await supabase.storage
-        .from("profile_pictures")
-        .upload("/applicants/1.jpeg", bytes, {
-          contentType: "image/jpeg",
-          upsert: false,
-        });
-      if (!error) {
-        router.push("/discover");
+    if (step === TOTAL_STEPS) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let profilePicUrl: string | null = null;
+
+      if (profile.profileImageUri) {
+        const file = new File(profile.profileImageUri);
+        const bytes = await file.bytes();
+        const storagePath = `/applicants/1.jpeg`;
+        const { error: uploadError } = await supabase.storage
+          .from("profile_pictures")
+          .upload(storagePath, bytes, {
+            contentType: "image/jpeg",
+            upsert: true,
+          });
+        if (uploadError) {
+          console.error("Image upload failed:", uploadError.message);
+          return;
+        }
+        const { data: urlData } = supabase.storage
+          .from("profile_pictures")
+          .getPublicUrl(storagePath);
+        profilePicUrl = urlData.publicUrl;
       }
+
+      const { error } = await supabase.from("Applicant").upsert({
+        id: user.id,
+        f_name: profile.fName,
+        l_name: profile.lName,
+        phone: profile.phone,
+        address: profile.address,
+        education: profile.education,
+        experience: profile.experience,
+        skills: profile.skills,
+        bio: profile.bio,
+        linkedin: profile.linkedin,
+        portfolio: profile.portfolio,
+        github: profile.github,
+        ...(profilePicUrl && { profile_pic: profilePicUrl }),
+      });
+
       if (error) {
-        console.log("Error code:", error.name);
+        console.error("Profile save failed:", error.message);
+        return;
       }
+
+      router.replace("/(tabs)/discover");
       return;
     }
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
