@@ -1,5 +1,7 @@
 import { Colors } from "@/constants/theme";
-import { Stack } from "expo-router";
+import { supabase } from "@/lib/supabase";
+import { Stack, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { MD3DarkTheme, PaperProvider } from "react-native-paper";
 
 //Colors hex values can be edited from /constants/theme.ts
@@ -29,6 +31,18 @@ const appTheme = {
 };
 
 export default function RootLayout() {
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace("/(tabs)/discover");
+      } else {
+        router.replace("/login");
+      }
+    });
+  }, []);
+
   return (
     <PaperProvider theme={appTheme}>
       <Stack>

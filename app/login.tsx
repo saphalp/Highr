@@ -1,15 +1,16 @@
-import { Colors } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Button, TextInput } from "react-native-paper";
 
 const characterImages = [
-  require('@/assets/images/characters.png'),   // 0 - default
-  require('@/assets/images/character2.png'),   // 1
-  require('@/assets/images/character3.png'),   // 2
-  require('@/assets/images/character4.png'),   // 3 - stop here
-  require('@/assets/images/character5.png'),   // 4 - looking down
+  require("@/assets/images/characters.png"), // 0 - default
+  require("@/assets/images/character2.png"), // 1
+  require("@/assets/images/character3.png"), // 2
+  require("@/assets/images/character4.png"), // 3 - stop here
+  require("@/assets/images/character5.png"), // 4 - looking down
 ];
 
 export default function LoginScreen() {
@@ -18,6 +19,48 @@ export default function LoginScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async () => {
+    if (!email || !password) return;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      console.error(error.message);
+      return;
+    }
+
+    const isApplicant = data.user.user_metadata?.role !== "employer";
+    const profileComplete = await checkProfileComplete(data.user.id, isApplicant);
+
+    if (profileComplete) {
+      router.push("/(tabs)/discover");
+    } else {
+      router.push(`/profile-setup?isApplicant=${isApplicant}`);
+    }
+  };
+
+  const checkProfileComplete = async (userId: string, isApplicant: boolean) => {
+    if (isApplicant) {
+      const { data } = await supabase
+        .from("Applicant")
+        .select("f_name, l_name, experience")
+        .eq("id", userId)
+        .single();
+      return !!(data?.f_name && data?.l_name && data?.experience?.length > 0);
+    } else {
+      const { data } = await supabase
+        .from("Employer")
+        .select("contact_name, company_name, industry")
+        .eq("id", userId)
+        .single();
+      return !!(data?.contact_name && data?.company_name && data?.industry);
+    }
+  };
 
   useEffect(() => {
     if (showPassword) {
@@ -61,38 +104,59 @@ export default function LoginScreen() {
         mode="outlined"
         style={styles.input}
         textColor={Colors.text}
-        onFocus={() => { setIsFocused(true); setShowPassword(false); }}
+        value={email}
+        onChangeText={setEmail}
+        onFocus={() => {
+          setIsFocused(true);
+          setShowPassword(false);
+        }}
         onBlur={() => setIsFocused(false)}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
+        theme={{
+          colors: {
+            primary: Colors.primary,
+            onSurfaceVariant: Colors.textMuted,
+          },
+        }}
       />
       <TextInput
         label="Password"
         mode="outlined"
         secureTextEntry={!showPassword}
+        value={password}
+        onChangeText={setPassword}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         right={
           <TextInput.Icon
-            icon={showPassword ? 'eye' : 'eye-off'}
+            icon={showPassword ? "eye" : "eye-off"}
             onPress={() => setShowPassword(!showPassword)}
           />
         }
         style={styles.input}
         textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
+        theme={{
+          colors: {
+            primary: Colors.primary,
+            onSurfaceVariant: Colors.textMuted,
+          },
+        }}
       />
 
       <Button
         mode="contained"
         style={styles.button}
         labelStyle={styles.buttonText}
+        onPress={handleLogin}
       >
         LOG IN
       </Button>
 
       <Text style={styles.signupLink}>
-        Don't have an account?{' '}
-        <Text style={styles.signupLinkBold} onPress={() => router.push('/signup')}>
+        Don't have an account?{" "}
+        <Text
+          style={styles.signupLinkBold}
+          onPress={() => router.push("/signup")}
+        >
           Sign up
         </Text>
       </Text>
@@ -105,10 +169,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   characterContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
     backgroundColor: Colors.background,
   },
@@ -119,14 +183,14 @@ const styles = StyleSheet.create({
   title: {
     color: Colors.text,
     fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     color: Colors.textMuted,
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 32,
   },
   input: {
@@ -141,16 +205,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 16,
   },
   signupLink: {
     color: Colors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 14,
   },
   signupLinkBold: {
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

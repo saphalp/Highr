@@ -1,14 +1,14 @@
 import ApplicantSetup from "@/components/ApplicantSetup";
 import EmployerSetup from "@/components/EmployerSetup";
-import { Stack } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import React from "react";
 
 export default function profileSetup() {
-  const isApplicant = true; //should be pulled from the database
+  const { isApplicant } = useLocalSearchParams<{ isApplicant: string }>();
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      {isApplicant ? <ApplicantSetup /> : <EmployerSetup />}
+      {isApplicant === "true" ? <ApplicantSetup /> : <EmployerSetup />}
     </>
   );
 }
