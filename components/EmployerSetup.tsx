@@ -27,21 +27,60 @@ export default function EmployerSetup() {
   );
 
   const handleNext = async () => {
-    if (step == TOTAL_STEPS) {
-      const file = new File(profile.profileImageUri);
-      const bytes = await file.bytes();
-      const { error } = await supabase.storage
-        .from("profile_pictures")
-        .upload("/employers/1.jpeg", bytes, {
-          contentType: "image/jpeg",
-          upsert: false,
-        });
-      if (!error) {
-        router.push("/discover");
+    if (step === TOTAL_STEPS) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let logoUrl: string | null = null;
+
+      if (profile.profileImageUri) {
+        const file = new File(profile.profileImageUri);
+        const bytes = await file.bytes();
+        const storagePath = `${user.id}/profile.jpeg`;
+        const { error: uploadError } = await supabase.storage
+          .from("profile_pictures")
+          .upload(storagePath, bytes, {
+            contentType: "image/jpeg",
+            upsert: true,
+          });
+        if (uploadError) {
+          console.error("Image upload failed:", uploadError.message);
+          return;
+        }
+        const { data: urlData } = supabase.storage
+          .from("profile_pictures")
+          .getPublicUrl(storagePath);
+        logoUrl = urlData.publicUrl;
       }
+
+      const { error } = await supabase.from("Employer").upsert({
+        id: user.id,
+        contact_name: profile.contactName,
+        contact_title: profile.contactTitle,
+        contact_phone: profile.contactPhone,
+        company_name: profile.companyName,
+        industry: profile.industry,
+        company_size: profile.companySize,
+        founded_year: profile.foundedYear,
+        website: profile.website,
+        about: profile.about,
+        city: profile.city,
+        country: profile.country,
+        work_types: profile.workTypes,
+        linkedin: profile.linkedin,
+        twitter: profile.twitter,
+        culture: profile.culture,
+        ...(logoUrl && { logo: logoUrl }),
+      });
+
       if (error) {
-        console.log("Error code:", error.name);
+        console.error("Profile save failed:", error.message);
+        return;
       }
+
+      router.replace("/(tabs)/discover");
       return;
     }
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));

@@ -10,11 +10,17 @@ export default function Profile() {
     router.replace("/login");
   };
 
+  const handleEditProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isApplicant = user?.user_metadata?.role !== "employer";
+    router.push(`/profile-setup?isApplicant=${isApplicant}`);
+  };
+
   return (
     <View style={styles.container}>
       <Button
         mode="contained"
-        onPress={() => router.push("/profile-setup")}
+        onPress={handleEditProfile}
         style={styles.editButton}
       >
         Edit Profile
