@@ -1,3 +1,4 @@
+import BackButton from '@/components/BackButton';
 import { Colors } from '@/constants/theme';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -22,7 +23,7 @@ export default function CreateJobScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView>
         <Text style={styles.title}>Create Job Posting</Text>
-
+      <BackButton /> 
       <TextInput    // text input for job name
         label="Job Name"
         mode="outlined"
