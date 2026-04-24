@@ -2,7 +2,7 @@ import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button } from "react-native-paper";
 
 export default function Profile() {
   const handleLogout = async () => {
@@ -25,6 +25,25 @@ export default function Profile() {
       >
         Edit Profile
       </Button>
+
+      <Button
+        mode="contained"
+        onPress={() => {
+          router.push("/recruiter/recruiter-job-postings");
+        }}
+        style={styles.editButton}
+      >
+        My Job Postings
+      </Button>
+
+      <Button
+      mode="outlined"
+      onPress={() => router.push("/terms-and-conditions")}
+      style={styles.termsButton}
+    >
+      Terms and Conditions
+    </Button>
+
       <Button
         mode="outlined"
         onPress={handleLogout}
@@ -57,5 +76,9 @@ const styles = StyleSheet.create({
   },
   logoutLabel: {
     color: Colors.error,
+  },
+  termsButton: {
+    width: "100%",
+    borderRadius: 8,
   },
 });
