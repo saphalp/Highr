@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button } from "react-native-paper";
 
@@ -16,6 +17,24 @@ export default function Profile() {
     router.push(`/profile-setup?isApplicant=${isApplicant}`);
   };
 
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUserRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setRole(user?.user_metadata?.role || null);
+      };
+    getUserRole();
+  }, []);
+
+  const isEmployer = role === "employer";
+  const isApplicant = role !== "employer";
+
+
+
   return (
     <View style={styles.container}>
       <Button
@@ -26,6 +45,7 @@ export default function Profile() {
         Edit Profile
       </Button>
 
+    {isEmployer && (
       <Button
         mode="contained"
         onPress={() => {
@@ -35,6 +55,19 @@ export default function Profile() {
       >
         My Job Postings
       </Button>
+    )}
+
+    {isApplicant && (
+      <Button
+        mode="contained"
+        onPress={() => {
+          router.push("/preview-card" as any);
+        }}
+        style={styles.editButton}
+      >
+        Preview Card
+      </Button>
+    )}
 
       <Button
       mode="outlined"
