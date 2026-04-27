@@ -6,11 +6,11 @@ import { Image, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 const characterImages = [
-  require("@/assets/images/characters.png"), // 0 - default
-  require("@/assets/images/character2.png"), // 1
-  require("@/assets/images/character3.png"), // 2
-  require("@/assets/images/character4.png"), // 3 - stop here
-  require("@/assets/images/character5.png"), // 4 - looking down
+  require("@/assets/images/characters.png"),
+  require("@/assets/images/character2.png"),
+  require("@/assets/images/character3.png"),
+  require("@/assets/images/character4.png"),
+  require("@/assets/images/character5.png"),
 ];
 
 export default function LoginScreen() {
@@ -21,6 +21,24 @@ export default function LoginScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const checkProfileComplete = async (userId: string, isApplicant: boolean) => {
+    if (isApplicant) {
+      const { data } = await supabase
+        .from("Applicant")
+        .select("id")
+        .eq("id", userId)
+        .single();
+      return !!data;
+    } else {
+      const { data } = await supabase
+        .from("Employer")
+        .select("id")
+        .eq("id", userId)
+        .single();
+      return !!data;
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -44,27 +62,8 @@ export default function LoginScreen() {
     }
   };
 
-  const checkProfileComplete = async (userId: string, isApplicant: boolean) => {
-    if (isApplicant) {
-      const { data } = await supabase
-        .from("Applicant")
-        .select("f_name, l_name, experience")
-        .eq("id", userId)
-        .single();
-      return !!(data?.f_name && data?.l_name && data?.experience?.length > 0);
-    } else {
-      const { data } = await supabase
-        .from("Employer")
-        .select("contact_name, company_name, industry")
-        .eq("id", userId)
-        .single();
-      return !!(data?.contact_name && data?.company_name && data?.industry);
-    }
-  };
-
   useEffect(() => {
     if (showPassword) {
-      // animate from frame 1 to 3 and stop
       let current = 1;
       setFrameIndex(1);
       intervalRef.current = setInterval(() => {
@@ -75,10 +74,8 @@ export default function LoginScreen() {
         }
       }, 200);
     } else if (isFocused) {
-      // looking down when field is focused
       setFrameIndex(4);
     } else {
-      // default
       setFrameIndex(0);
     }
     return () => {
