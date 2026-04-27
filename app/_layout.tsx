@@ -2,6 +2,7 @@ import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3DarkTheme, PaperProvider } from "react-native-paper";
 
 //Colors hex values can be edited from /constants/theme.ts
