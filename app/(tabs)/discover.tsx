@@ -1,3 +1,4 @@
+import MatchPopup from '@/components/MatchPopup';
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +59,8 @@ const JOBS = [
 
 export default function Discover() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [matchVisible, setMatchVisible] = useState(false);
+  const [matchedJob, setMatchedJob] = useState<typeof JOBS[0] | null>(null);
   const swiperRef = useRef<Swiper<typeof JOBS[0]>>(null);
 
   useEffect(() => {
@@ -71,21 +74,17 @@ export default function Discover() {
     });
   }, []);
 
+  const handleSwipeRight = (index: number) => {
+    setMatchedJob(JOBS[index]);
+    setMatchVisible(true);
+  };
+
   const handleSwipeLeft = () => {
-    swiperRef.current?.swipeLeft();
-  };
-
-  const handleSwipeRight = () => {
-    swiperRef.current?.swipeRight();
-  };
-
-  const handleSuperLike = () => {
-    swiperRef.current?.swipeTop();
+    console.log('Passed!');
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.logo}>Highr</Text>
@@ -98,7 +97,6 @@ export default function Discover() {
         </TouchableOpacity>
       </View>
 
-      {/* Swiper */}
       <View style={styles.swiperContainer}>
         <Swiper
           ref={swiperRef}
@@ -131,8 +129,8 @@ export default function Discover() {
               </View>
             </View>
           )}
-          onSwipedRight={(index) => console.log('Liked:', JOBS[index].title)}
-          onSwipedLeft={(index) => console.log('Passed:', JOBS[index].title)}
+          onSwipedRight={handleSwipeRight}
+          onSwipedLeft={handleSwipeLeft}
           backgroundColor="transparent"
           stackSize={3}
           cardIndex={0}
@@ -181,18 +179,38 @@ export default function Discover() {
         />
       </View>
 
-      {/* Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.passButton} onPress={handleSwipeLeft}>
+        <TouchableOpacity
+          style={styles.passButton}
+          onPress={() => swiperRef.current?.swipeLeft()}
+        >
           <Ionicons name="close" size={32} color="#FF6B6B" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.superLikeButton} onPress={handleSuperLike}>
+        <TouchableOpacity
+          style={styles.superLikeButton}
+          onPress={() => swiperRef.current?.swipeTop()}
+        >
           <Ionicons name="star" size={24} color="#00C9FF" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.likeButton} onPress={handleSwipeRight}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => swiperRef.current?.swipeRight()}
+        >
           <Ionicons name="heart" size={32} color={Colors.text} />
         </TouchableOpacity>
       </View>
+
+      {matchedJob && (
+        <MatchPopup
+          visible={matchVisible}
+          jobTitle={matchedJob.title}
+          company={matchedJob.company}
+          onKeepSwiping={() => setMatchVisible(false)}
+          onSendMessage={() => {
+            setMatchVisible(false);
+          }}
+        />
+      )}
     </View>
   );
 }
