@@ -35,19 +35,22 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace("/(tabs)/discover");
-      } else {
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        router.replace(session ? "/(tabs)/discover" : "/login");
+      } catch {
         router.replace("/login");
       }
-    });
+    }
+    checkSession();
   }, []);
 
   return (
     <PaperProvider theme={appTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />

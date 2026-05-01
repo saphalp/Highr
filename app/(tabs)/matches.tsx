@@ -44,9 +44,17 @@ export default function Matches() {
           <ChatCard
             key={chat.id}
             chat={chat}
-            onPress={() => {
-              // TODO: navigate to individual chat screen
-            }}
+            onPress={() =>
+              router.push({
+                pathname: "/chat",
+                params: {
+                  id: chat.id,
+                  name: chat.name,
+                  profilePicture: chat.profilePicture ?? "",
+                  lastMessage: chat.lastMessage,
+                },
+              })
+            }
           />
         ))}
       </ScrollView>
