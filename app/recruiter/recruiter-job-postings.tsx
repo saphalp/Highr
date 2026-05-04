@@ -1,7 +1,8 @@
 import RecruiterJobPostingCard from '@/components/RecruiterJobPostingCard';
 import { Colors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -12,8 +13,14 @@ export default function RecruiterJobPostings() {
   return (
     <SafeAreaView style={styles.container}>
     <Stack.Screen options={{ headerShown: false }} />
-    <ScrollView>
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={26} color={Colors.text} />
+      </TouchableOpacity>
       <Text style={styles.title}>My Job Postings</Text>
+      <View style={{ width: 34 }} />
+    </View>
+    <ScrollView>
       
       <Button     // navigate to job creation screen
         mode="contained"
@@ -37,7 +44,9 @@ export default function RecruiterJobPostings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16, },
-  title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center', },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  backButton: { padding: 4 },
+  title: { color: Colors.text, fontSize: 22, fontWeight: 'bold', textAlign: 'center' },
   createButton: { backgroundColor: Colors.primary, marginBottom: 24, borderRadius: 8, padding: 4, },
   createButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 16, },
   card: { backgroundColor: Colors.surface, marginBottom: 16, },
