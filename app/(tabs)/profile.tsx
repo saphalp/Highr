@@ -39,7 +39,9 @@ export default function Profile() {
     <View style={styles.container}>
       <Button
         mode="contained"
-        onPress={handleEditProfile}
+        onPress={() => {
+          router.push("/recruiter/edit-profile-recruiter");
+        }}  
         style={styles.editButton}
       >
         Edit Profile
