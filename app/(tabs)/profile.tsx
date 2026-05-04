@@ -31,7 +31,7 @@ export default function Profile() {
   }, []);
 
   const isEmployer = role === "employer";
-  const isApplicant = role !== "employer";
+  const isApplicant = role === "applicant";
 
 
 
@@ -40,8 +40,12 @@ export default function Profile() {
       <Button
         mode="contained"
         onPress={() => {
-          router.push("/recruiter/edit-profile-recruiter");
-        }}  
+          if (isApplicant) {
+            router.push("/applicant/edit-profile-applicant");
+          } else if (isEmployer) {
+            router.push("/recruiter/edit-profile-recruiter");
+          }
+        }}
         style={styles.editButton}
       >
         Edit Profile
