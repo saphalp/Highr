@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -16,6 +17,36 @@ export default function CreateJobScreen() {
   const [company, setCompany] = useState("");
   const [pay, setPay] = useState("");
   const [hours, setHours] = useState("");
+
+  const handleSubmit = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+  
+    if (userError || !user) {
+      console.log("User not found:", userError);
+      return;
+    }
+
+    const { error } = await supabase.from("job_postings").insert({
+      employer_id: user.id,
+      job_name: jobName,
+      job_description: description,
+      skills: skills.split(",").map(skill => skill.trim()), // convert comma-separated string to array
+      location: location,
+      company_name: company,
+      salary: pay ? Number(pay) : null, // convert to number if not empty
+      work_type: hours,
+    });
+
+    if (error) {
+      console.log("Error inserting job:", error);
+      return;
+    }
+
+    router.back();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,7 +129,7 @@ export default function CreateJobScreen() {
         mode="contained"
         style={styles.button}
         labelStyle={styles.buttonText}
-        onPress={() => {router.back();}} // for now just go back to the previous screen, but in future send data to supabase and then go back
+        onPress={handleSubmit}
       >
         Submit Job Posting
       </Button>
