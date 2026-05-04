@@ -1,7 +1,8 @@
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -35,38 +36,111 @@ function getInitials(name: string): string {
 }
 
 export default function Chat() {
-  const { name, profilePicture, lastMessage } = useLocalSearchParams<{
+  const { id: matchId, name, profilePicture } = useLocalSearchParams<{
+    id: string;
     name: string;
     profilePicture: string;
     lastMessage: string;
   }>();
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "initial",
-      text: lastMessage,
-      sent: false,
-      timestamp: formatTime(new Date()),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
 
-  function sendMessage() {
-    const text = inputText.trim();
-    if (!text) return;
+  useEffect(() => {
+    let subscription: ReturnType<typeof supabase.channel> | null = null;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        text,
-        sent: true,
-        timestamp: formatTime(new Date()),
-      },
-    ]);
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !matchId) return;
+      setUserId(user.id);
+      setUserRole(user.user_metadata?.role ?? "applicant");
+
+      // Find or create a conversation for this match
+      let { data: convo } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+      if (!convo) {
+        const { data: newConvo } = await supabase
+          .from("conversations")
+          .insert({ match_id: matchId })
+          .select("id")
+          .single();
+        convo = newConvo;
+      }
+
+      if (!convo) return;
+      setConversationId(convo.id);
+
+      const { data } = await supabase
+        .from("messages")
+        .select("id, sender_id, content, created_at")
+        .eq("conversation_id", convo.id)
+        .order("created_at", { ascending: true });
+
+      if (data) {
+        setMessages(
+          data.map((m) => ({
+            id: m.id,
+            text: m.content,
+            sent: m.sender_id === user.id,
+            timestamp: formatTime(new Date(m.created_at)),
+          }))
+        );
+      }
+
+      subscription = supabase
+        .channel(`messages:${convo.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${convo.id}` },
+          (payload) => {
+            const m = payload.new as { id: string; sender_id: string; content: string; created_at: string };
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: m.id,
+                text: m.content,
+                sent: m.sender_id === user.id,
+                timestamp: formatTime(new Date(m.created_at)),
+              },
+            ]);
+            setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+          }
+        )
+        .subscribe();
+    }
+
+    init();
+    return () => { subscription?.unsubscribe(); };
+  }, [matchId]);
+
+  async function sendMessage() {
+    const text = inputText.trim();
+    if (!text || !userId || !conversationId) return;
     setInputText("");
+
+    const optimistic: Message = {
+      id: `temp-${Date.now()}`,
+      text,
+      sent: true,
+      timestamp: formatTime(new Date()),
+    };
+    setMessages((prev) => [...prev, optimistic]);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+
+    await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: userId,
+      sender_role: userRole,
+      content: text,
+    });
   }
 
   const hasAvatar = !!profilePicture;
@@ -118,7 +192,7 @@ export default function Chat() {
           value={inputText}
           onChangeText={setInputText}
           multiline
-          blurOnSubmit={false}
+          submitBehavior="newline"
         />
         <TouchableOpacity
           style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
