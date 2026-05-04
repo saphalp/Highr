@@ -57,6 +57,36 @@ export default function CreateJobScreen() {
     router.back();
   };
 
+  const handleSubmit = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+  
+    if (userError || !user) {
+      console.log("User not found:", userError);
+      return;
+    }
+
+    const { error } = await supabase.from("job_postings").insert({
+      employer_id: user.id,
+      job_name: jobName,
+      job_description: description,
+      skills: skills.split(",").map(skill => skill.trim()), // convert comma-separated string to array
+      location: location,
+      company_name: company,
+      salary: pay ? Number(pay) : null, // convert to number if not empty
+      work_type: hours,
+    });
+
+    if (error) {
+      console.log("Error inserting job:", error);
+      return;
+    }
+
+    router.back();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
