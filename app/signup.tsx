@@ -1,10 +1,14 @@
 import MessageBar from "@/components/MessageBar";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -20,16 +24,19 @@ export default function SignupScreen() {
       setMessage("Passwords do not match.");
       return;
     }
+
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: { data: { role: "applicant" } },
     });
+
     if (error) {
       setMessageType("error");
       setMessage(error.message);
       return;
     }
+
     setMessageType("info");
     setMessage(`Confirmation link sent to ${email}`);
     router.push("/login");
@@ -41,19 +48,83 @@ export default function SignupScreen() {
       setMessage("Passwords do not match.");
       return;
     }
+
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: { data: { role: "employer" } },
     });
+
     if (error) {
       setMessageType("error");
       setMessage(error.message);
       return;
     }
+
     setMessageType("info");
     setMessage(`Confirmation link sent to ${email}`);
     router.push("/login");
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: "highr",
+        path: "auth/callback",
+      });
+
+      console.log("Google Redirect URL:", redirectTo);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        setMessageType("error");
+        setMessage(error.message);
+        return;
+      }
+
+      if (!data?.url) {
+        setMessageType("error");
+        setMessage("Google sign-in URL was not created.");
+        return;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo
+      );
+
+      if (result.type === "success") {
+        const url = new URL(result.url);
+        const code = url.searchParams.get("code");
+
+        if (!code) {
+          setMessageType("error");
+          setMessage("No auth code returned from Google.");
+          return;
+        }
+
+        const { error: sessionError } =
+          await supabase.auth.exchangeCodeForSession(code);
+
+        if (sessionError) {
+          setMessageType("error");
+          setMessage(sessionError.message);
+          return;
+        }
+
+        router.replace("/profile-setup");
+      }
+    } catch (err: any) {
+      setMessageType("error");
+      setMessage(err.message ?? "Google sign-in failed.");
+    }
   };
   return (
     <View style={styles.container}>
@@ -105,6 +176,13 @@ export default function SignupScreen() {
         }}
       />
 
+      <Pressable
+        style={styles.googleButton}
+        onPress={handleGoogleSignIn}
+      >
+        <Text style={styles.googleButtonText}>Continue with Google</Text>
+      </Pressable>
+
       <Button
         mode="contained"
         style={styles.buttonPrimary}
@@ -122,6 +200,7 @@ export default function SignupScreen() {
       >
         Sign Up as Employer
       </Button>
+
 
       <MessageBar message={message} type={messageType} />
 
@@ -188,4 +267,28 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "bold",
   },
+
+  googleButton: {
+  width: "100%",
+  paddingVertical: 14,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "#d1d5db",
+  backgroundColor: "#ffffff",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 14,
+},
+
+googleButtonText: {
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#111827",
+},
+
+orText: {
+  textAlign: "center",
+  color: "#6b7280",
+  marginBottom: 16,
+},
 });
