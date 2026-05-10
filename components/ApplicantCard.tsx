@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { EducationEntry, ExperienceEntry, SkillEntry } from '@/types/applicant';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
@@ -25,32 +26,52 @@ export default function ApplicantCard({
   applicant: ApplicantRow;
   appliedFor?: string;
 }) {
+  const [imgError, setImgError] = useState(false);
   const fullName = `${applicant.f_name ?? ''} ${applicant.l_name ?? ''}`.trim();
   const initial = (applicant.f_name || '?')[0].toUpperCase();
   const topSkills = (applicant.skills ?? []).slice(0, 4);
   const latestExp = (applicant.experience ?? [])[0];
   const latestEdu = (applicant.education ?? [])[0];
+  const hasPhoto = !!applicant.profile_pic && !imgError;
 
   return (
     <View style={styles.card}>
+      {/* Top photo area */}
       <View style={styles.cardTop}>
-        {applicant.profile_pic ? (
-          <Image source={{ uri: applicant.profile_pic }} style={styles.avatar} />
+        {hasPhoto ? (
+          <Image
+            source={{ uri: applicant.profile_pic }}
+            style={styles.coverImage}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <View style={styles.avatarBadge}>
-            <Text style={styles.avatarText}>{initial}</Text>
+          <View style={styles.avatarFallback}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
           </View>
         )}
+
+        {/* Job Seeker badge — teal, top-left */}
         <View style={styles.typeBadge}>
-          <Text style={styles.typeBadgeText}>Applicant</Text>
+          <Ionicons name="person" size={11} color="#fff" />
+          <Text style={styles.typeBadgeText}>  Job Seeker</Text>
+        </View>
+
+        {/* Name scrim overlay at bottom of photo */}
+        <View style={styles.photoScrim}>
+          <Text style={styles.scrimName} numberOfLines={1}>{fullName || 'Anonymous'}</Text>
+          {latestExp ? (
+            <Text style={styles.scrimRole} numberOfLines={1}>
+              {latestExp.title} · {latestExp.company}
+            </Text>
+          ) : null}
         </View>
       </View>
 
+      {/* Info section */}
       <View style={styles.cardBottom}>
-        <Text style={styles.name}>{fullName || 'Anonymous'}</Text>
-        {latestExp ? (
-          <Text style={styles.jobTitle}>{latestExp.title} @ {latestExp.company}</Text>
-        ) : null}
         {applicant.address ? (
           <View style={styles.infoRow}>
             <Ionicons name="location-outline" size={13} color={Colors.textMuted} />
@@ -79,7 +100,7 @@ export default function ApplicantCard({
         ) : null}
         {appliedFor ? (
           <View style={styles.appliedRow}>
-            <Ionicons name="briefcase-outline" size={12} color={Colors.primary} />
+            <Ionicons name="briefcase-outline" size={12} color={TEAL} />
             <Text style={styles.appliedText} numberOfLines={1}> Applied for: {appliedFor}</Text>
           </View>
         ) : null}
@@ -87,6 +108,8 @@ export default function ApplicantCard({
     </View>
   );
 }
+
+const TEAL = '#00BFA5';
 
 const styles = StyleSheet.create({
   card: {
@@ -99,61 +122,73 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: TEAL,
   },
   cardTop: {
     flex: 1,
-    backgroundColor: Colors.outline,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 16,
+    backgroundColor: '#1a2a2a',
+    overflow: 'hidden',
   },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 3,
-    borderColor: Colors.secondary,
+  coverImage: {
+    ...StyleSheet.absoluteFillObject,
   },
-  avatarBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.secondary,
+  avatarFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: TEAL,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: Colors.text,
-    fontSize: 32,
+    color: '#fff',
+    fontSize: 40,
     fontWeight: 'bold',
   },
   typeBadge: {
-    backgroundColor: Colors.secondary,
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TEAL,
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   typeBadgeText: {
-    color: Colors.text,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  photoScrim: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  scrimName: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrimRole: {
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 12,
-    fontWeight: '600',
+    marginTop: 2,
   },
   cardBottom: {
-    padding: 20,
+    padding: 16,
     backgroundColor: Colors.surface,
-  },
-  name: {
-    color: Colors.text,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  jobTitle: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
   },
   infoRow: {
     flexDirection: 'row',
@@ -173,30 +208,33 @@ const styles = StyleSheet.create({
   },
   tagsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
     marginBottom: 8,
   },
   tag: {
-    backgroundColor: Colors.outline,
+    backgroundColor: `${TEAL}22`,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${TEAL}55`,
   },
   tagText: {
-    color: Colors.textMuted,
+    color: TEAL,
     fontSize: 11,
+    fontWeight: '500',
   },
   appliedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: Colors.outline,
   },
   appliedText: {
-    color: Colors.primary,
+    color: TEAL,
     fontSize: 12,
     fontWeight: '500',
     flex: 1,
