@@ -1,8 +1,10 @@
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -26,47 +28,154 @@ function formatTime(date: Date): string {
 }
 
 function getInitials(name: string): string {
-  return name
+  return (name || "?")
     .split(" ")
     .map((p) => p[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase();
 }
 
 export default function Chat() {
-  const { name, profilePicture, lastMessage } = useLocalSearchParams<{
+  const { name, profilePicture, conversationId } = useLocalSearchParams<{
     name: string;
     profilePicture: string;
-    lastMessage: string;
+    conversationId: string;
   }>();
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "initial",
-      text: lastMessage,
-      sent: false,
-      timestamp: formatTime(new Date()),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string>("applicant");
   const listRef = useRef<FlatList>(null);
 
-  function sendMessage() {
-    const text = inputText.trim();
-    if (!text) return;
+  useEffect(() => {
+    if (!conversationId) {
+      setLoading(false);
+      return;
+    }
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        text,
-        sent: true,
-        timestamp: formatTime(new Date()),
-      },
-    ]);
+    let userId: string;
+
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      userId = user.id;
+      setCurrentUserId(user.id);
+      setCurrentUserRole(user.user_metadata?.role ?? "applicant");
+
+      const { data: rows } = await supabase
+        .from("messages")
+        .select("id, content, sender_id, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (rows) {
+        setMessages(
+          rows.map((row) => ({
+            id: row.id,
+            text: row.content,
+            sent: row.sender_id === user.id,
+            timestamp: formatTime(new Date(row.created_at)),
+          })),
+        );
+      }
+      setLoading(false);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 50);
+    }
+
+    init();
+
+    const subscription = supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            id: string;
+            content: string;
+            sender_id: string;
+            created_at: string;
+          };
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === row.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: row.id,
+                text: row.content,
+                sent: row.sender_id === userId,
+                timestamp: formatTime(new Date(row.created_at)),
+              },
+            ];
+          });
+          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [conversationId]);
+
+  async function sendMessage() {
+    const text = inputText.trim();
+    if (!text || !currentUserId || !conversationId) return;
+
     setInputText("");
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_id: currentUserId,
+        sender_role: currentUserRole,
+        content: text,
+      })
+      .select("id, created_at")
+      .single();
+
+    if (error) {
+      console.error("Failed to send message:", error.message);
+      return;
+    }
+
+    if (data) {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: data.id,
+            text,
+            sent: true,
+            timestamp: formatTime(new Date(data.created_at)),
+          },
+        ];
+      });
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    }
+
+    supabase
+      .from("conversations")
+      .update({ last_message_at: new Date().toISOString() })
+      .eq("id", conversationId)
+      .then(() => {});
   }
 
   const hasAvatar = !!profilePicture;
@@ -94,21 +203,47 @@ export default function Chat() {
         </Text>
       </View>
 
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        renderItem={({ item }) => (
-          <View style={[styles.bubbleWrapper, item.sent ? styles.alignRight : styles.alignLeft]}>
-            <View style={[styles.bubble, item.sent ? styles.bubbleSent : styles.bubbleReceived]}>
-              <Text style={styles.bubbleText}>{item.text}</Text>
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.messageList,
+            messages.length === 0 && styles.messageListEmpty,
+          ]}
+          onContentSizeChange={() =>
+            listRef.current?.scrollToEnd({ animated: false })
+          }
+          ListEmptyComponent={
+            <View style={styles.centered}>
+              <Text style={styles.emptyText}>No messages yet. Say hello!</Text>
             </View>
-            <Text style={styles.timestamp}>{item.timestamp}</Text>
-          </View>
-        )}
-      />
+          }
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.bubbleWrapper,
+                item.sent ? styles.alignRight : styles.alignLeft,
+              ]}
+            >
+              <View
+                style={[
+                  styles.bubble,
+                  item.sent ? styles.bubbleSent : styles.bubbleReceived,
+                ]}
+              >
+                <Text style={styles.bubbleText}>{item.text}</Text>
+              </View>
+              <Text style={styles.timestamp}>{item.timestamp}</Text>
+            </View>
+          )}
+        />
+      )}
 
       <View style={styles.inputRow}>
         <TextInput
@@ -121,7 +256,10 @@ export default function Chat() {
           blurOnSubmit={false}
         />
         <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            !inputText.trim() && styles.sendButtonDisabled,
+          ]}
           onPress={sendMessage}
           disabled={!inputText.trim()}
         >
@@ -177,9 +315,21 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
   },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+  },
   messageList: {
     paddingHorizontal: 14,
     paddingVertical: 16,
+  },
+  messageListEmpty: {
+    flex: 1,
   },
   bubbleWrapper: {
     maxWidth: "75%",

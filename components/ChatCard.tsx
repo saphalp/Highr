@@ -9,6 +9,7 @@ export type ChatPreview = {
   lastMessage: string;
   timestamp: string;
   unread?: boolean;
+  conversationId: string;
 };
 
 type Props = {
@@ -17,9 +18,10 @@ type Props = {
 };
 
 function AvatarFallback({ name }: { name: string }) {
-  const initials = name
+  const initials = (name || "?")
     .split(" ")
     .map((part) => part[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase();
