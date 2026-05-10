@@ -9,6 +9,7 @@ export type ChatPreview = {
   lastMessage: string;
   timestamp: string;
   unread?: boolean;
+  conversationId: string;
 };
 
 type Props = {
