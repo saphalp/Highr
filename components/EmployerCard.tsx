@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
@@ -21,32 +22,47 @@ export type EmployerRow = {
 };
 
 export default function EmployerCard({ employer }: { employer: EmployerRow }) {
+  const [imgError, setImgError] = useState(false);
   const location = [employer.city, employer.country].filter(Boolean).join(', ');
   const workTypes = employer.work_types ?? [];
   const initial = (employer.company_name || '?')[0].toUpperCase();
+  const hasLogo = !!employer.logo && !imgError;
 
   return (
     <View style={styles.card}>
+      {/* Top photo / logo area */}
       <View style={styles.cardTop}>
-        {employer.logo ? (
-          <Image source={{ uri: employer.logo }} style={styles.logo} />
+        {hasLogo ? (
+          <Image
+            source={{ uri: employer.logo }}
+            style={styles.coverImage}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{initial}</Text>
+          <View style={styles.logoFallback}>
+            <Ionicons name="business" size={36} color={`${Colors.primary}88`} style={{ marginBottom: 6 }} />
+            <Text style={styles.fallbackText}>{initial}</Text>
           </View>
         )}
-        {workTypes[0] ? (
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{workTypes[0]}</Text>
-          </View>
-        ) : null}
+
+        {/* Employer badge — outlined, top-left */}
+        <View style={styles.typeBadge}>
+          <Ionicons name="briefcase-outline" size={11} color={Colors.primary} />
+          <Text style={styles.typeBadgeText}>  Employer</Text>
+        </View>
+
+        {/* Company name scrim overlay at bottom */}
+        <View style={styles.photoScrim}>
+          <Text style={styles.scrimCompany} numberOfLines={1}>{employer.company_name}</Text>
+          {employer.industry ? (
+            <Text style={styles.scrimIndustry} numberOfLines={1}>{employer.industry}</Text>
+          ) : null}
+        </View>
       </View>
 
+      {/* Info section */}
       <View style={styles.cardBottom}>
-        <Text style={styles.companyName}>{employer.company_name}</Text>
-        {employer.industry ? (
-          <Text style={styles.industry}>{employer.industry}</Text>
-        ) : null}
         {location ? (
           <View style={styles.infoRow}>
             <Ionicons name="location-outline" size={13} color={Colors.textMuted} />
@@ -90,64 +106,75 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
   cardTop: {
     flex: 1,
-    backgroundColor: Colors.outline,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 16,
+    backgroundColor: '#1a1a30',
+    overflow: 'hidden',
   },
-  logo: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  coverImage: {
+    ...StyleSheet.absoluteFillObject,
   },
-  badge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
+  logoFallback: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  badgeText: {
+  fallbackText: {
     color: Colors.text,
-    fontSize: 28,
+    fontSize: 48,
     fontWeight: 'bold',
   },
   typeBadge: {
-    backgroundColor: Colors.primary,
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   typeBadgeText: {
-    color: Colors.text,
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  photoScrim: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(20,18,50,0.72)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: `${Colors.primary}44`,
+  },
+  scrimCompany: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrimIndustry: {
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '600',
+    marginTop: 2,
   },
   cardBottom: {
-    padding: 20,
+    padding: 16,
     backgroundColor: Colors.surface,
-  },
-  companyName: {
-    color: Colors.text,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  industry: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
   },
   infoRow: {
     flexDirection: 'row',
@@ -166,19 +193,22 @@ const styles = StyleSheet.create({
   },
   tagsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
     marginBottom: 10,
   },
   tag: {
-    backgroundColor: Colors.outline,
+    backgroundColor: `${Colors.primary}22`,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${Colors.primary}55`,
   },
   tagText: {
-    color: Colors.textMuted,
+    color: Colors.primary,
     fontSize: 11,
+    fontWeight: '500',
   },
   footerRow: {
     flexDirection: 'row',
