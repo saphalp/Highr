@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 const { height } = Dimensions.get('window');
@@ -16,7 +16,13 @@ export type JobPostingRow = {
   salary?: string;
 };
 
-export default function JobPostingCard({ posting }: { posting: JobPostingRow }) {
+export default function JobPostingCard({
+  posting,
+  onAiPress,
+}: {
+  posting: JobPostingRow;
+  onAiPress?: () => void;
+}) {
   const skills = posting.skills ?? [];
   const initial = (posting.company_name || '?')[0].toUpperCase();
 
@@ -26,11 +32,16 @@ export default function JobPostingCard({ posting }: { posting: JobPostingRow }) 
         <View style={styles.companyBadge}>
           <Text style={styles.companyBadgeText}>{initial}</Text>
         </View>
-        {posting.salary ? (
-          <View style={styles.salaryBadge}>
-            <Text style={styles.salaryBadgeText}>{posting.salary}</Text>
-          </View>
-        ) : null}
+        <View style={styles.cardTopRight}>
+          {posting.salary ? (
+            <View style={styles.salaryBadge}>
+              <Text style={styles.salaryBadgeText}>{posting.salary}</Text>
+            </View>
+          ) : null}
+          <TouchableOpacity style={styles.aiButton} onPress={onAiPress} activeOpacity={0.75}>
+            <Ionicons name="sparkles" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.cardBottom}>
@@ -80,6 +91,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: 16,
+  },
+  cardTopRight: {
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  aiButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   companyBadge: {
     width: 56,

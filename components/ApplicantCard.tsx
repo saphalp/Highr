@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { EducationEntry, ExperienceEntry, SkillEntry } from '@/types/applicant';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Dimensions, Image, StyleSheet, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 const { height } = Dimensions.get('window');
@@ -22,9 +22,11 @@ export type ApplicantRow = {
 export default function ApplicantCard({
   applicant,
   appliedFor,
+  onAiPress,
 }: {
   applicant: ApplicantRow;
   appliedFor?: string;
+  onAiPress?: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
   const fullName = `${applicant.f_name ?? ''} ${applicant.l_name ?? ''}`.trim();
@@ -58,6 +60,11 @@ export default function ApplicantCard({
           <Ionicons name="person" size={11} color="#fff" />
           <Text style={styles.typeBadgeText}>  Job Seeker</Text>
         </View>
+
+        {/* AI button — top-right */}
+        <TouchableOpacity style={styles.aiButton} onPress={onAiPress} activeOpacity={0.75}>
+          <Ionicons name="sparkles" size={16} color="#fff" />
+        </TouchableOpacity>
 
         {/* Name scrim overlay at bottom of photo */}
         <View style={styles.photoScrim}>
@@ -150,6 +157,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 40,
     fontWeight: 'bold',
+  },
+  aiButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   typeBadge: {
     position: 'absolute',
