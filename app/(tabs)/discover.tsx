@@ -1,4 +1,10 @@
 import ApplicantCard, { ApplicantRow } from "@/components/ApplicantCard";
+
+export type ApplicantCardData = ApplicantRow & {
+  job_posting_id: string;
+  applied_for?: string;
+};
+
 import JobPostingCard, { JobPostingRow } from "@/components/JobPostingCard";
 import MatchPopup from "@/components/MatchPopup";
 import { Colors } from "@/constants/theme";
@@ -18,12 +24,61 @@ import {
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
 
-export type ApplicantCardData = ApplicantRow & {
-  job_posting_id: string;
-  applied_for?: string;
-};
-
 type UserRole = "applicant" | "employer" | "unknown";
+
+const US_STATES = [
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+  "Remote",
+];
 
 // ── Demo cards shown when no real data is available ──────────────────────────
 const DEMO_JOB_POSTINGS: JobPostingRow[] = [
@@ -234,8 +289,9 @@ async function ensureConversationExists(
   const { data: existingMatch, error: selectError } =
     await matchQuery.maybeSingle();
 
-  if (selectError)
+  if (selectError) {
     console.error("[ensureConversation] match select error:", selectError);
+  }
 
   let match = existingMatch;
 
@@ -251,8 +307,9 @@ async function ensureConversationExists(
       .select("id")
       .single();
 
-    if (insertError)
+    if (insertError) {
       console.error("[ensureConversation] match insert error:", insertError);
+    }
 
     match = created;
   }
@@ -266,21 +323,23 @@ async function ensureConversationExists(
     .eq("match_id", match.id)
     .maybeSingle();
 
-  if (convSelectError)
+  if (convSelectError) {
     console.error("[ensureConversation] conv select error:", convSelectError);
+  }
 
   if (!existing) {
     const { error: convInsertError } = await supabase
       .from("conversations")
       .insert({ match_id: match.id });
 
-    if (convInsertError)
+    if (convInsertError) {
       console.error("[ensureConversation] conv insert error:", convInsertError);
-    else
+    } else {
       console.log(
         "[ensureConversation] conversation created for match",
         match.id,
       );
+    }
   } else {
     console.log("[ensureConversation] conversation already exists:", existing.id);
   }
@@ -298,15 +357,10 @@ export default function Discover() {
   const [allSwiped, setAllSwiped] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ── Added filter UI states ────────────────────────────────────────────────
   const [filterVisible, setFilterVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
-  const [selectedWorkModes, setSelectedWorkModes] = useState<string[]>([]);
+  const [filterLocation, setFilterLocation] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState<
-    string[]
-  >([]);
   const [minPay, setMinPay] = useState("");
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
@@ -336,7 +390,6 @@ export default function Discover() {
         setRole(userRole);
 
         if (userRole === "applicant") {
-          // fetch jobs this applicant hasn't swiped on yet
           const { data: swipedRows } = await supabase
             .from("swipes")
             .select("job_posting_id")
@@ -356,7 +409,6 @@ export default function Discover() {
 
           setJobPostings((data as JobPostingRow[]) ?? []);
         } else if (userRole === "employer") {
-          // fetch applicants who swiped right on employer's jobs but employer hasn't responded
           const { data: pendingSwipes, error: swipesError } = await supabase
             .from("swipes")
             .select("applicant_id, job_posting_id")
@@ -432,7 +484,8 @@ export default function Discover() {
 
   const handleJobSwipeRight = async (index: number) => {
     const posting = jobPostings[index];
-    if (!currentUserId) return;
+
+    if (!currentUserId || !posting) return;
 
     console.log(
       "[SwipeRight] applicant:",
@@ -455,13 +508,11 @@ export default function Discover() {
 
     console.log("[SwipeRight] write error:", error?.message ?? "none");
 
-    // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
       console.error("Swipe upsert failed:", error.message);
       return;
     }
 
-    // Only show match popup if employer already swiped right on this applicant
     const { data } = await supabase
       .from("swipes")
       .select("employer_dir")
@@ -483,6 +534,8 @@ export default function Discover() {
 
     const posting = jobPostings[index];
 
+    if (!posting) return;
+
     supabase
       .from("swipes")
       .upsert(
@@ -499,11 +552,12 @@ export default function Discover() {
       });
   };
 
-  // Employers only see applicants who already swiped right, so a right swipe is always a match
   const handleApplicantSwipeRight = async (index: number) => {
     if (!currentUserId) return;
 
     const applicant = applicants[index];
+
+    if (!applicant) return;
 
     const { error } = await supabase.from("swipes").upsert(
       {
@@ -515,7 +569,6 @@ export default function Discover() {
       { onConflict: "applicant_id,employer_id,job_posting_id" },
     );
 
-    // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
       console.error("Swipe upsert failed:", error.message);
       return;
@@ -540,6 +593,8 @@ export default function Discover() {
     if (!currentUserId) return;
 
     const applicant = applicants[index];
+
+    if (!applicant) return;
 
     supabase
       .from("swipes")
@@ -572,7 +627,6 @@ export default function Discover() {
     else applicantSwiperRef.current?.swipeRight();
   };
 
-  // ── Added filter UI helper functions ──────────────────────────────────────
   const toggleValue = (
     value: string,
     selectedValues: string[],
@@ -587,14 +641,16 @@ export default function Discover() {
 
   const resetFilterUI = () => {
     setSearchText("");
-    setSelectedJobTypes([]);
-    setSelectedWorkModes([]);
+    setFilterLocation("");
     setSelectedSkills([]);
-    setSelectedExperienceLevels([]);
     setMinPay("");
+    setAllSwiped(false);
+    setRefreshKey((k) => k + 1);
   };
 
   const applyFilterUI = () => {
+    setAllSwiped(false);
+    setRefreshKey((k) => k + 1);
     setFilterVisible(false);
   };
 
@@ -634,6 +690,79 @@ export default function Discover() {
     );
   };
 
+  const getNumberFromSalary = (
+    salary: string | number | undefined | null,
+  ) => {
+    if (!salary) return 0;
+
+    if (typeof salary === "number") return salary;
+
+    const salaryText = salary.toLowerCase();
+    const numbers = salaryText.match(/\d+/g);
+
+    if (!numbers) return 0;
+
+    const firstNumber = Number(numbers[0]);
+
+    if (salaryText.includes("k")) {
+      return firstNumber * 1000;
+    }
+
+    return firstNumber;
+  };
+
+  const jobMatchesFilters = (job: JobPostingRow) => {
+    const search = searchText.toLowerCase().trim();
+    const selectedLocation = filterLocation.toLowerCase().trim();
+
+    const jobName = job.job_name?.toLowerCase() ?? "";
+    const companyName = job.company_name?.toLowerCase() ?? "";
+    const location = job.location?.toLowerCase() ?? "";
+    const description = job.description?.toLowerCase() ?? "";
+
+    const matchesSearch =
+      search === "" ||
+      jobName.includes(search) ||
+      companyName.includes(search) ||
+      location.includes(search) ||
+      description.includes(search);
+
+    const matchesLocation =
+      selectedLocation === "" || location.includes(selectedLocation);
+
+    const jobSkills = Array.isArray(job.skills)
+      ? job.skills.map((skill) => String(skill).toLowerCase())
+      : [];
+
+    const matchesSkills =
+      selectedSkills.length === 0 ||
+      selectedSkills.some((skill) => {
+        const selectedSkill = skill.toLowerCase();
+
+        return jobSkills.some(
+          (jobSkill) =>
+            jobSkill.includes(selectedSkill) ||
+            selectedSkill.includes(jobSkill),
+        );
+      });
+
+    const minPayNumber = Number(minPay);
+    const jobPayNumber = getNumberFromSalary(job.salary);
+
+    const matchesPay =
+      minPay.trim() === "" ||
+      (!Number.isNaN(minPayNumber) && jobPayNumber >= minPayNumber);
+
+    return matchesSearch && matchesLocation && matchesSkills && matchesPay;
+  };
+
+  const locationSuggestions =
+    filterLocation.trim().length === 0
+      ? []
+      : US_STATES.filter((state) =>
+          state.toLowerCase().startsWith(filterLocation.toLowerCase()),
+        ).slice(0, 6);
+
   const welcomeText =
     role === "applicant"
       ? "Find your next opportunity"
@@ -642,6 +771,8 @@ export default function Discover() {
         : "Discover";
 
   const displayJobs = [...DEMO_JOB_POSTINGS, ...jobPostings];
+  const filteredDisplayJobs = displayJobs.filter(jobMatchesFilters);
+
   const displayApplicants = [...DEMO_APPLICANTS, ...applicants];
 
   return (
@@ -694,26 +825,62 @@ export default function Discover() {
             <Text style={styles.emptySubtext}>Check back later for more</Text>
           </View>
         ) : role === "applicant" ? (
-          <Swiper
-            key={`job-swiper-${refreshKey}`}
-            ref={jobSwiperRef}
-            cards={displayJobs}
-            renderCard={(posting) => <JobPostingCard posting={posting} />}
-            onSwipedRight={(i) => {
-              if (i >= DEMO_JOB_POSTINGS.length)
-                handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
-            }}
-            onSwipedLeft={(i) => {
-              if (i >= DEMO_JOB_POSTINGS.length)
-                handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
-            }}
-            onSwipedAll={() => setAllSwiped(true)}
-            backgroundColor="transparent"
-            stackSize={3}
-            cardIndex={0}
-            cardVerticalMargin={0}
-            overlayLabels={OVERLAY_LABELS}
-          />
+          filteredDisplayJobs.length === 0 ? (
+            <View style={styles.centered}>
+              <Ionicons
+                name="search-outline"
+                size={64}
+                color={Colors.textMuted}
+              />
+              <Text style={styles.emptyText}>No jobs match your filters</Text>
+              <Text style={styles.emptySubtext}>
+                Try resetting or changing your filters
+              </Text>
+            </View>
+          ) : (
+            <Swiper
+              key={`job-swiper-${refreshKey}`}
+              ref={jobSwiperRef}
+              cards={filteredDisplayJobs}
+              renderCard={(posting) => <JobPostingCard posting={posting} />}
+              onSwipedRight={(i) => {
+                const swipedJob = filteredDisplayJobs[i];
+
+                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
+                  return;
+                }
+
+                const realJobIndex = jobPostings.findIndex(
+                  (job) => job.id === swipedJob.id,
+                );
+
+                if (realJobIndex !== -1) {
+                  handleJobSwipeRight(realJobIndex);
+                }
+              }}
+              onSwipedLeft={(i) => {
+                const swipedJob = filteredDisplayJobs[i];
+
+                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
+                  return;
+                }
+
+                const realJobIndex = jobPostings.findIndex(
+                  (job) => job.id === swipedJob.id,
+                );
+
+                if (realJobIndex !== -1) {
+                  handleJobSwipeLeft(realJobIndex);
+                }
+              }}
+              onSwipedAll={() => setAllSwiped(true)}
+              backgroundColor="transparent"
+              stackSize={3}
+              cardIndex={0}
+              cardVerticalMargin={0}
+              overlayLabels={OVERLAY_LABELS}
+            />
+          )
         ) : role === "employer" ? (
           <Swiper
             key={`applicant-swiper-${refreshKey}`}
@@ -726,12 +893,14 @@ export default function Discover() {
               />
             )}
             onSwipedRight={(i) => {
-              if (i >= DEMO_APPLICANTS.length)
+              if (i >= DEMO_APPLICANTS.length) {
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
+              }
             }}
             onSwipedLeft={(i) => {
-              if (i >= DEMO_APPLICANTS.length)
+              if (i >= DEMO_APPLICANTS.length) {
                 handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
+              }
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
@@ -770,7 +939,7 @@ export default function Discover() {
               <View>
                 <Text style={styles.filterTitle}>Filter Jobs</Text>
                 <Text style={styles.filterSubtitle}>
-                  Choose what job cards you want to see
+                  Search by keyword, location, skills, or pay
                 </Text>
               </View>
 
@@ -795,20 +964,30 @@ export default function Discover() {
               </View>
 
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Job Type</Text>
-                {renderFilterChips(
-                  ["Internship", "Part-time", "Full-time", "Contract"],
-                  selectedJobTypes,
-                  setSelectedJobTypes,
-                )}
-              </View>
+                <Text style={styles.filterSectionTitle}>Location</Text>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Work Mode</Text>
-                {renderFilterChips(
-                  ["Remote", "Hybrid", "On-site"],
-                  selectedWorkModes,
-                  setSelectedWorkModes,
+                <TextInput
+                  placeholder="Start typing a state or Remote"
+                  placeholderTextColor={Colors.textMuted}
+                  value={filterLocation}
+                  onChangeText={setFilterLocation}
+                  style={styles.filterInput}
+                />
+
+                {locationSuggestions.length > 0 && (
+                  <View style={styles.locationSuggestionBox}>
+                    {locationSuggestions.map((state) => (
+                      <TouchableOpacity
+                        key={state}
+                        style={styles.locationSuggestionItem}
+                        onPress={() => setFilterLocation(state)}
+                      >
+                        <Text style={styles.locationSuggestionText}>
+                          {state}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 )}
               </View>
 
@@ -819,23 +998,16 @@ export default function Discover() {
                     "React",
                     "React Native",
                     "TypeScript",
+                    "JavaScript",
                     "Python",
                     "SQL",
                     "Node.js",
                     "Cybersecurity",
                     "Cloud",
+                    "Figma",
                   ],
                   selectedSkills,
                   setSelectedSkills,
-                )}
-              </View>
-
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Experience Level</Text>
-                {renderFilterChips(
-                  ["Internship", "Entry Level", "Junior", "Mid Level"],
-                  selectedExperienceLevels,
-                  setSelectedExperienceLevels,
                 )}
               </View>
 
@@ -906,15 +1078,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-
-  // Added wrapper so Filter and Notification can sit together
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-
-  // Added filter button
   filterButton: {
     height: 40,
     paddingHorizontal: 14,
@@ -932,7 +1100,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-
   notifButton: {
     width: 40,
     height: 40,
@@ -1016,8 +1183,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },
-
-  // ── Added filter modal styles ─────────────────────────────────────────────
   filterOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1082,6 +1247,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: Colors.surface,
     color: Colors.text,
+  },
+  locationSuggestionBox: {
+    marginTop: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  locationSuggestionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outline,
+  },
+  locationSuggestionText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: "600",
   },
   filterChipWrap: {
     flexDirection: "row",
