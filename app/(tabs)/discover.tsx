@@ -6,6 +6,7 @@ export type ApplicantCardData = ApplicantRow & {
 };
 import JobPostingCard, { JobPostingRow } from "@/components/JobPostingCard";
 import MatchPopup from "@/components/MatchPopup";
+import SummaryModal from "@/components/SummaryModal";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -223,8 +224,12 @@ export default function Discover() {
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState("");
   const [matchDetail, setMatchDetail] = useState("");
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [summaryStatus, setSummaryStatus] = useState<"loading" | "success" | "error">("loading");
+  const [summaryMessage, setSummaryMessage] = useState("");
   const [allSwiped, setAllSwiped] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [userProfile, setUserProfile] = useState<Record<string, unknown> | null>(null);
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
@@ -246,6 +251,13 @@ export default function Discover() {
         setRole(userRole);
 
         if (userRole === "applicant") {
+          const { data: profile } = await supabase
+            .from("Applicant")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          setUserProfile(profile ?? null);
+
           // fetch jobs this applicant hasn't swiped on yet
           const { data: swipedRows } = await supabase
             .from("swipes")
@@ -425,6 +437,36 @@ export default function Discover() {
       });
   };
 
+  const handleAiPress = async (cardData: JobPostingRow | ApplicantCardData) => {
+    setSummaryVisible(true);
+    setSummaryStatus("loading");
+    setSummaryMessage("");
+    try {
+      const res = await fetch(
+        "https://n8n.saphalpant.com/webhook-test/f5060ba2-628d-4438-87ed-b8cd3ea956b2",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicantProfile: userProfile,
+            jobListing: cardData,
+          }),
+        },
+      );
+      if (!res.ok) {
+        setSummaryStatus("error");
+        setSummaryMessage(`Server error (${res.status}). Please try again.`);
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      setSummaryStatus("success");
+      setSummaryMessage(data?.message ?? JSON.stringify(data) ?? "Done.");
+    } catch (err) {
+      setSummaryStatus("error");
+      setSummaryMessage("Network error. Check your connection and try again.");
+    }
+  };
+
   const swipeLeft = () => {
     if (role === "applicant") jobSwiperRef.current?.swipeLeft();
     else applicantSwiperRef.current?.swipeLeft();
@@ -487,7 +529,9 @@ export default function Discover() {
             key={`job-swiper-${refreshKey}`}
             ref={jobSwiperRef}
             cards={displayJobs}
-            renderCard={(posting) => <JobPostingCard posting={posting} />}
+            renderCard={(posting) => (
+              <JobPostingCard posting={posting} onAiPress={() => handleAiPress(posting)} />
+            )}
             onSwipedRight={(i) => {
               if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
             }}
@@ -507,7 +551,10 @@ export default function Discover() {
             ref={applicantSwiperRef}
             cards={displayApplicants}
             renderCard={(applicant) => (
-              <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
+              <ApplicantCard
+                applicant={applicant}
+                appliedFor={applicant.applied_for}
+              />
             )}
             onSwipedRight={(i) => {
               if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
@@ -547,6 +594,17 @@ export default function Discover() {
         detail={matchDetail}
         onKeepSwiping={() => setMatchVisible(false)}
         onSendMessage={() => setMatchVisible(false)}
+      />
+
+      <SummaryModal
+        visible={summaryVisible}
+        status={summaryStatus}
+        message={summaryMessage}
+        onClose={() => {
+          setSummaryVisible(false);
+          setSummaryStatus("loading");
+          setSummaryMessage("");
+        }}
       />
     </View>
   );

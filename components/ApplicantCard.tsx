@@ -61,10 +61,12 @@ export default function ApplicantCard({
           <Text style={styles.typeBadgeText}>  Job Seeker</Text>
         </View>
 
-        {/* AI button — top-right */}
-        <TouchableOpacity style={styles.aiButton} onPress={onAiPress} activeOpacity={0.75}>
-          <Ionicons name="sparkles" size={16} color="#fff" />
-        </TouchableOpacity>
+        {/* AI button — top-right, only for applicant role */}
+        {onAiPress ? (
+          <TouchableOpacity style={styles.aiButton} onPress={onAiPress} activeOpacity={0.75}>
+            <Ionicons name="sparkles" size={16} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
 
         {/* Name scrim overlay at bottom of photo */}
         <View style={styles.photoScrim}>
