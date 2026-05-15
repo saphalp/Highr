@@ -1,12 +1,7 @@
 import ApplicantCard, { ApplicantRow } from "@/components/ApplicantCard";
-
-export type ApplicantCardData = ApplicantRow & {
-  job_posting_id: string;
-  applied_for?: string;
-};
 import JobPostingCard, { JobPostingRow } from "@/components/JobPostingCard";
 import MatchPopup from "@/components/MatchPopup";
-import SummaryModal from "@/components/SummaryModal";
+import SummaryModal, { SummaryData } from "@/components/SummaryModal";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +15,11 @@ import {
 } from "react-native";
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
+
+export type ApplicantCardData = ApplicantRow & {
+  job_posting_id: string;
+  applied_for?: string;
+};
 
 type UserRole = "applicant" | "employer" | "unknown";
 
@@ -73,10 +73,25 @@ const DEMO_APPLICANTS: ApplicantCardData[] = [
       { name: "Python", level: "Intermediate" },
     ],
     experience: [
-      { company: "Shopify", title: "Software Engineer", location: "Remote", startDate: "2021-06", endDate: "", current: true, description: "" },
+      {
+        company: "Shopify",
+        title: "Software Engineer",
+        location: "Remote",
+        startDate: "2021-06",
+        endDate: "",
+        current: true,
+        description: "",
+      },
     ],
     education: [
-      { institution: "UT Austin", degree: "B.S.", field: "Computer Science", startYear: "2017", endYear: "2021", current: false },
+      {
+        institution: "UT Austin",
+        degree: "B.S.",
+        field: "Computer Science",
+        startYear: "2017",
+        endYear: "2021",
+        current: false,
+      },
     ],
     job_posting_id: "demo-job-1",
     applied_for: "Frontend Engineer",
@@ -93,10 +108,25 @@ const DEMO_APPLICANTS: ApplicantCardData[] = [
       { name: "Figma", level: "Intermediate" },
     ],
     experience: [
-      { company: "Amazon", title: "Mobile Engineer", location: "Seattle", startDate: "2020-03", endDate: "", current: true, description: "" },
+      {
+        company: "Amazon",
+        title: "Mobile Engineer",
+        location: "Seattle",
+        startDate: "2020-03",
+        endDate: "",
+        current: true,
+        description: "",
+      },
     ],
     education: [
-      { institution: "University of Washington", degree: "B.S.", field: "Informatics", startYear: "2016", endYear: "2020", current: false },
+      {
+        institution: "University of Washington",
+        degree: "B.S.",
+        field: "Informatics",
+        startYear: "2016",
+        endYear: "2020",
+        current: false,
+      },
     ],
     job_posting_id: "demo-job-2",
     applied_for: "Product Designer",
@@ -113,10 +143,25 @@ const DEMO_APPLICANTS: ApplicantCardData[] = [
       { name: "Spark", level: "Advanced" },
     ],
     experience: [
-      { company: "Grubhub", title: "Data Engineer", location: "Chicago", startDate: "2019-07", endDate: "", current: true, description: "" },
+      {
+        company: "Grubhub",
+        title: "Data Engineer",
+        location: "Chicago",
+        startDate: "2019-07",
+        endDate: "",
+        current: true,
+        description: "",
+      },
     ],
     education: [
-      { institution: "Northwestern", degree: "M.S.", field: "Data Science", startYear: "2017", endYear: "2019", current: false },
+      {
+        institution: "Northwestern",
+        degree: "M.S.",
+        field: "Data Science",
+        startYear: "2017",
+        endYear: "2019",
+        current: false,
+      },
     ],
     job_posting_id: "demo-job-3",
     applied_for: "Backend Engineer",
@@ -169,7 +214,11 @@ async function ensureConversationExists(
   employerId: string,
   jobPostingId: string | null,
 ) {
-  console.log("[ensureConversation] start", { applicantId, employerId, jobPostingId });
+  console.log("[ensureConversation] start", {
+    applicantId,
+    employerId,
+    jobPostingId,
+  });
 
   let matchQuery = supabase
     .from("matches")
@@ -179,18 +228,26 @@ async function ensureConversationExists(
   if (jobPostingId) matchQuery = matchQuery.eq("job_posting_id", jobPostingId);
   else matchQuery = matchQuery.is("job_posting_id", null);
 
-  const { data: existingMatch, error: selectError } = await matchQuery.maybeSingle();
-  if (selectError) console.error("[ensureConversation] match select error:", selectError);
+  const { data: existingMatch, error: selectError } =
+    await matchQuery.maybeSingle();
+  if (selectError)
+    console.error("[ensureConversation] match select error:", selectError);
 
   let match = existingMatch;
 
   if (!match) {
     const { data: created, error: insertError } = await supabase
       .from("matches")
-      .insert({ applicant_id: applicantId, employer_id: employerId, job_posting_id: jobPostingId, status: "active" })
+      .insert({
+        applicant_id: applicantId,
+        employer_id: employerId,
+        job_posting_id: jobPostingId,
+        status: "active",
+      })
       .select("id")
       .single();
-    if (insertError) console.error("[ensureConversation] match insert error:", insertError);
+    if (insertError)
+      console.error("[ensureConversation] match insert error:", insertError);
     match = created;
   }
 
@@ -202,16 +259,25 @@ async function ensureConversationExists(
     .select("id")
     .eq("match_id", match.id)
     .maybeSingle();
-  if (convSelectError) console.error("[ensureConversation] conv select error:", convSelectError);
+  if (convSelectError)
+    console.error("[ensureConversation] conv select error:", convSelectError);
 
   if (!existing) {
     const { error: convInsertError } = await supabase
       .from("conversations")
       .insert({ match_id: match.id });
-    if (convInsertError) console.error("[ensureConversation] conv insert error:", convInsertError);
-    else console.log("[ensureConversation] conversation created for match", match.id);
+    if (convInsertError)
+      console.error("[ensureConversation] conv insert error:", convInsertError);
+    else
+      console.log(
+        "[ensureConversation] conversation created for match",
+        match.id,
+      );
   } else {
-    console.log("[ensureConversation] conversation already exists:", existing.id);
+    console.log(
+      "[ensureConversation] conversation already exists:",
+      existing.id,
+    );
   }
 }
 
@@ -225,11 +291,17 @@ export default function Discover() {
   const [matchName, setMatchName] = useState("");
   const [matchDetail, setMatchDetail] = useState("");
   const [summaryVisible, setSummaryVisible] = useState(false);
-  const [summaryStatus, setSummaryStatus] = useState<"loading" | "success" | "error">("loading");
-  const [summaryMessage, setSummaryMessage] = useState("");
+  const [summaryStatus, setSummaryStatus] = useState<
+    "loading" | "success" | "error"
+  >("loading");
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [summaryError, setSummaryError] = useState("");
   const [allSwiped, setAllSwiped] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [userProfile, setUserProfile] = useState<Record<string, unknown> | null>(null);
+  const [userProfile, setUserProfile] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
@@ -243,8 +315,13 @@ export default function Discover() {
       setRefreshKey((k) => k + 1);
 
       async function loadData() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setLoading(false); return; }
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
 
         setCurrentUserId(user.id);
         const userRole: UserRole = user.user_metadata?.role ?? "unknown";
@@ -275,7 +352,6 @@ export default function Discover() {
 
           const { data } = await query;
           setJobPostings((data as JobPostingRow[]) ?? []);
-
         } else if (userRole === "employer") {
           // fetch applicants who swiped right on employer's jobs but employer hasn't responded
           const { data: pendingSwipes, error: swipesError } = await supabase
@@ -285,21 +361,44 @@ export default function Discover() {
             .eq("applicant_dir", "right")
             .is("employer_dir", null);
 
-          console.log("[Discover] employer pending swipes:", JSON.stringify(pendingSwipes), "error:", swipesError?.message);
+          console.log(
+            "[Discover] employer pending swipes:",
+            JSON.stringify(pendingSwipes),
+            "error:",
+            swipesError?.message,
+          );
 
-          if (!pendingSwipes?.length) { setLoading(false); return; }
+          if (!pendingSwipes?.length) {
+            setLoading(false);
+            return;
+          }
 
-          const applicantIds = [...new Set(pendingSwipes.map((s) => s.applicant_id))];
-          const jobPostingIds = [...new Set(pendingSwipes.map((s) => s.job_posting_id).filter(Boolean) as string[])];
+          const applicantIds = [
+            ...new Set(pendingSwipes.map((s) => s.applicant_id)),
+          ];
+          const jobPostingIds = [
+            ...new Set(
+              pendingSwipes
+                .map((s) => s.job_posting_id)
+                .filter(Boolean) as string[],
+            ),
+          ];
 
           const [{ data: profiles }, { data: jobNames }] = await Promise.all([
             supabase.from("Applicant").select("*").in("id", applicantIds),
-            supabase.from("job_postings").select("id, job_name").in("id", jobPostingIds),
+            supabase
+              .from("job_postings")
+              .select("id, job_name")
+              .in("id", jobPostingIds),
           ]);
 
           const cards: ApplicantCardData[] = pendingSwipes.map((swipe) => {
-            const profile = (profiles ?? []).find((a) => a.id === swipe.applicant_id);
-            const job = (jobNames ?? []).find((j) => j.id === swipe.job_posting_id);
+            const profile = (profiles ?? []).find(
+              (a) => a.id === swipe.applicant_id,
+            );
+            const job = (jobNames ?? []).find(
+              (j) => j.id === swipe.job_posting_id,
+            );
             return {
               id: swipe.applicant_id,
               f_name: profile?.f_name ?? "Applicant",
@@ -329,19 +428,24 @@ export default function Discover() {
     const posting = jobPostings[index];
     if (!currentUserId) return;
 
-    console.log("[SwipeRight] applicant:", currentUserId, "→ job:", posting.id, "employer:", posting.employer_id);
+    console.log(
+      "[SwipeRight] applicant:",
+      currentUserId,
+      "→ job:",
+      posting.id,
+      "employer:",
+      posting.employer_id,
+    );
 
-    const { error } = await supabase
-      .from("swipes")
-      .upsert(
-        {
-          applicant_id: currentUserId,
-          employer_id: posting.employer_id,
-          applicant_dir: "right",
-          job_posting_id: posting.id,
-        },
-        { onConflict: "applicant_id,employer_id,job_posting_id" },
-      );
+    const { error } = await supabase.from("swipes").upsert(
+      {
+        applicant_id: currentUserId,
+        employer_id: posting.employer_id,
+        applicant_dir: "right",
+        job_posting_id: posting.id,
+      },
+      { onConflict: "applicant_id,employer_id,job_posting_id" },
+    );
 
     console.log("[SwipeRight] write error:", error?.message ?? "none");
 
@@ -392,17 +496,15 @@ export default function Discover() {
     if (!currentUserId) return;
     const applicant = applicants[index];
 
-    const { error } = await supabase
-      .from("swipes")
-      .upsert(
-        {
-          applicant_id: applicant.id,
-          employer_id: currentUserId,
-          employer_dir: "right",
-          job_posting_id: applicant.job_posting_id,
-        },
-        { onConflict: "applicant_id,employer_id,job_posting_id" },
-      );
+    const { error } = await supabase.from("swipes").upsert(
+      {
+        applicant_id: applicant.id,
+        employer_id: currentUserId,
+        employer_dir: "right",
+        job_posting_id: applicant.job_posting_id,
+      },
+      { onConflict: "applicant_id,employer_id,job_posting_id" },
+    );
 
     // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
@@ -410,11 +512,17 @@ export default function Discover() {
       return;
     }
 
-    ensureConversationExists(applicant.id, currentUserId, applicant.job_posting_id);
+    ensureConversationExists(
+      applicant.id,
+      currentUserId,
+      applicant.job_posting_id,
+    );
 
     const name = `${applicant.f_name ?? ""} ${applicant.l_name ?? ""}`.trim();
     setMatchName(name || "this applicant");
-    setMatchDetail(applicant.applied_for ?? applicant.experience?.[0]?.title ?? "");
+    setMatchDetail(
+      applicant.applied_for ?? applicant.experience?.[0]?.title ?? "",
+    );
     setMatchVisible(true);
   };
 
@@ -440,10 +548,11 @@ export default function Discover() {
   const handleAiPress = async (cardData: JobPostingRow | ApplicantCardData) => {
     setSummaryVisible(true);
     setSummaryStatus("loading");
-    setSummaryMessage("");
+    setSummaryData(null);
+    setSummaryError("");
     try {
       const res = await fetch(
-        "https://n8n.saphalpant.com/webhook-test/f5060ba2-628d-4438-87ed-b8cd3ea956b2",
+        "https://n8n.saphalpant.com/webhook/f5060ba2-628d-4438-87ed-b8cd3ea956b2",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -455,15 +564,20 @@ export default function Discover() {
       );
       if (!res.ok) {
         setSummaryStatus("error");
-        setSummaryMessage(`Server error (${res.status}). Please try again.`);
+        setSummaryError(`Server error (${res.status}). Please try again.`);
         return;
       }
-      const data = await res.json().catch(() => null);
-      setSummaryStatus("success");
-      setSummaryMessage(data?.message ?? JSON.stringify(data) ?? "Done.");
+      const json = await res.json().catch(() => null);
+      if (json?.success && json?.data) {
+        setSummaryData(json.data);
+        setSummaryStatus("success");
+      } else {
+        setSummaryStatus("error");
+        setSummaryError(json?.message ?? "Unexpected response from server.");
+      }
     } catch (err) {
       setSummaryStatus("error");
-      setSummaryMessage("Network error. Check your connection and try again.");
+      setSummaryError("Network error. Check your connection and try again.");
     }
   };
 
@@ -511,7 +625,7 @@ export default function Discover() {
       <View style={styles.swiperContainer}>
         <View style={styles.demoBanner}>
           <Ionicons name="flask-outline" size={13} color={Colors.textMuted} />
-          <Text style={styles.demoText}>  First 3 cards are samples</Text>
+          <Text style={styles.demoText}> First 3 cards are samples</Text>
         </View>
 
         {loading ? (
@@ -520,7 +634,11 @@ export default function Discover() {
           </View>
         ) : allSwiped ? (
           <View style={styles.centered}>
-            <Ionicons name="checkmark-circle-outline" size={64} color={Colors.primary} />
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={64}
+              color={Colors.primary}
+            />
             <Text style={styles.emptyText}>You're all caught up!</Text>
             <Text style={styles.emptySubtext}>Check back later for more</Text>
           </View>
@@ -530,13 +648,18 @@ export default function Discover() {
             ref={jobSwiperRef}
             cards={displayJobs}
             renderCard={(posting) => (
-              <JobPostingCard posting={posting} onAiPress={() => handleAiPress(posting)} />
+              <JobPostingCard
+                posting={posting}
+                onAiPress={() => handleAiPress(posting)}
+              />
             )}
             onSwipedRight={(i) => {
-              if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
+              if (i >= DEMO_JOB_POSTINGS.length)
+                handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
             }}
             onSwipedLeft={(i) => {
-              if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
+              if (i >= DEMO_JOB_POSTINGS.length)
+                handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
@@ -557,10 +680,12 @@ export default function Discover() {
               />
             )}
             onSwipedRight={(i) => {
-              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
+              if (i >= DEMO_APPLICANTS.length)
+                handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedLeft={(i) => {
-              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
+              if (i >= DEMO_APPLICANTS.length)
+                handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
@@ -599,11 +724,13 @@ export default function Discover() {
       <SummaryModal
         visible={summaryVisible}
         status={summaryStatus}
-        message={summaryMessage}
+        data={summaryData}
+        errorMessage={summaryError}
         onClose={() => {
           setSummaryVisible(false);
           setSummaryStatus("loading");
-          setSummaryMessage("");
+          setSummaryData(null);
+          setSummaryError("");
         }}
       />
     </View>
