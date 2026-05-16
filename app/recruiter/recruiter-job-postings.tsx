@@ -1,10 +1,17 @@
 import RecruiterJobPostingCard from '@/components/RecruiterJobPostingCard';
 import { Colors } from '@/constants/theme';
+<<<<<<< HEAD
 import { supabase } from '@/lib/supabase';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text } from 'react-native-paper';
+=======
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Button, Text } from 'react-native-paper';
+>>>>>>> 4a6996d... feat: fix swipe logic, refresh on focus, styled cards and tab bar
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type JobPosting = {
@@ -75,11 +82,22 @@ export default function RecruiterJobPostings() {
   return (
     <SafeAreaView style={styles.container}>
     <Stack.Screen options={{ headerShown: false }} />
+<<<<<<< HEAD
     <ScrollView
       onScroll={handleScroll}
       scrollEventThrottle={16}
     >
       <Text style={styles.title}>My Job Postings</Text>
+=======
+    <ScrollView>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={26} color={Colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>My Job Postings</Text>
+        <View style={{ width: 34 }} />
+      </View>
+>>>>>>> 4a6996d... feat: fix swipe logic, refresh on focus, styled cards and tab bar
       
       <Button
         mode="contained"
@@ -135,7 +153,9 @@ export default function RecruiterJobPostings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16, },
-  title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center', },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, },
+  backButton: { padding: 4, },
+  title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', textAlign: 'center', },
   createButton: { backgroundColor: Colors.primary, marginBottom: 24, borderRadius: 8, padding: 4, },
   createButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 16, },
   card: { backgroundColor: Colors.surface, marginBottom: 16, },

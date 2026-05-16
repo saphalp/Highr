@@ -9,10 +9,10 @@ import MatchPopup from "@/components/MatchPopup";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -20,9 +20,107 @@ import {
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
 
-const { height } = Dimensions.get("window");
-
 type UserRole = "applicant" | "employer" | "unknown";
+
+// ── Demo cards shown when no real data is available ──────────────────────────
+const DEMO_JOB_POSTINGS: JobPostingRow[] = [
+  {
+    id: "demo-job-1",
+    employer_id: "demo-employer-1",
+    job_name: "Frontend Engineer",
+    company_name: "Stripe",
+    location: "San Francisco, CA",
+    salary: "$140k – $180k",
+    skills: ["React Native", "TypeScript", "GraphQL"],
+    description:
+      "Join our payments UI team building the interfaces that millions of developers depend on every day.",
+  },
+  {
+    id: "demo-job-2",
+    employer_id: "demo-employer-2",
+    job_name: "Product Designer",
+    company_name: "Figma",
+    location: "Remote",
+    salary: "$120k – $160k",
+    skills: ["Figma", "Prototyping", "User Research"],
+    description:
+      "Shape the future of collaborative design tools used by over 4 million teams worldwide.",
+  },
+  {
+    id: "demo-job-3",
+    employer_id: "demo-employer-3",
+    job_name: "Backend Engineer",
+    company_name: "Notion",
+    location: "New York, NY",
+    salary: "$130k – $170k",
+    skills: ["Node.js", "PostgreSQL", "Redis"],
+    description:
+      "Help us scale the infrastructure powering the all-in-one workspace for notes, docs, and projects.",
+  },
+];
+
+const DEMO_APPLICANTS: ApplicantCardData[] = [
+  {
+    id: "demo-app-1",
+    f_name: "Alex",
+    l_name: "Rivera",
+    address: "Austin, TX",
+    bio: "Full-stack developer with 4 years of experience building scalable web apps and mobile products.",
+    skills: [
+      { name: "React", level: "Expert" },
+      { name: "Node.js", level: "Advanced" },
+      { name: "Python", level: "Intermediate" },
+    ],
+    experience: [
+      { company: "Shopify", title: "Software Engineer", location: "Remote", startDate: "2021-06", endDate: "", current: true, description: "" },
+    ],
+    education: [
+      { institution: "UT Austin", degree: "B.S.", field: "Computer Science", startYear: "2017", endYear: "2021", current: false },
+    ],
+    job_posting_id: "demo-job-1",
+    applied_for: "Frontend Engineer",
+  },
+  {
+    id: "demo-app-2",
+    f_name: "Jamie",
+    l_name: "Chen",
+    address: "Seattle, WA",
+    bio: "UX-focused mobile engineer who loves turning complex problems into delightful user experiences.",
+    skills: [
+      { name: "Swift", level: "Expert" },
+      { name: "Kotlin", level: "Advanced" },
+      { name: "Figma", level: "Intermediate" },
+    ],
+    experience: [
+      { company: "Amazon", title: "Mobile Engineer", location: "Seattle", startDate: "2020-03", endDate: "", current: true, description: "" },
+    ],
+    education: [
+      { institution: "University of Washington", degree: "B.S.", field: "Informatics", startYear: "2016", endYear: "2020", current: false },
+    ],
+    job_posting_id: "demo-job-2",
+    applied_for: "Product Designer",
+  },
+  {
+    id: "demo-app-3",
+    f_name: "Morgan",
+    l_name: "Patel",
+    address: "Chicago, IL",
+    bio: "Data engineer passionate about pipelines, analytics, and making data accessible to everyone.",
+    skills: [
+      { name: "Python", level: "Expert" },
+      { name: "SQL", level: "Expert" },
+      { name: "Spark", level: "Advanced" },
+    ],
+    experience: [
+      { company: "Grubhub", title: "Data Engineer", location: "Chicago", startDate: "2019-07", endDate: "", current: true, description: "" },
+    ],
+    education: [
+      { institution: "Northwestern", degree: "M.S.", field: "Data Science", startYear: "2017", endYear: "2019", current: false },
+    ],
+    job_posting_id: "demo-job-3",
+    applied_for: "Backend Engineer",
+  },
+];
 
 const OVERLAY_LABELS = {
   left: {
@@ -125,100 +223,101 @@ export default function Discover() {
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState("");
   const [matchDetail, setMatchDetail] = useState("");
+  const [allSwiped, setAllSwiped] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      setAllSwiped(false);
+      setJobPostings([]);
+      setApplicants([]);
+      setRefreshKey((k) => k + 1);
 
-      setCurrentUserId(user.id);
-      const userRole: UserRole = user.user_metadata?.role ?? "unknown";
-      setRole(userRole);
+      async function loadData() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoading(false); return; }
 
-      if (userRole === "applicant") {
-        const { data: swipedRows } = await supabase
-          .from("swipes")
-          .select("job_posting_id")
-          .eq("applicant_id", user.id);
+        setCurrentUserId(user.id);
+        const userRole: UserRole = user.user_metadata?.role ?? "unknown";
+        setRole(userRole);
 
-        const swipedIds = (swipedRows ?? [])
-          .map((r) => r.job_posting_id)
-          .filter(Boolean) as string[];
+        if (userRole === "applicant") {
+          // fetch jobs this applicant hasn't swiped on yet
+          const { data: swipedRows } = await supabase
+            .from("swipes")
+            .select("job_posting_id")
+            .eq("applicant_id", user.id);
 
-        let query = supabase.from("job_postings").select("*");
-        if (swipedIds.length > 0) {
-          query = query.not("id", "in", `(${swipedIds.join(",")})`);
-        }
+          const swipedIds = (swipedRows ?? [])
+            .map((r) => r.job_posting_id)
+            .filter(Boolean) as string[];
 
-        const { data } = await query;
-        setJobPostings((data as JobPostingRow[]) ?? []);
-      } else if (userRole === "employer") {
-        const { data: pendingSwipes, error: swipesError } = await supabase
-          .from("swipes")
-          .select("applicant_id, job_posting_id")
-          .eq("employer_id", user.id)
-          .eq("applicant_dir", "right")
-          .is("employer_dir", null);
+          let query = supabase.from("job_postings").select("*");
+          if (swipedIds.length > 0) {
+            query = query.not("id", "in", `(${swipedIds.join(",")})`);
+          }
 
-        console.log("[Discover] employer id:", user.id);
-        console.log("[Discover] pending swipes:", pendingSwipes, "error:", swipesError);
+          const { data } = await query;
+          setJobPostings((data as JobPostingRow[]) ?? []);
 
-        if (!pendingSwipes?.length) {
-          setLoading(false);
-          return;
-        }
+        } else if (userRole === "employer") {
+          // fetch applicants who swiped right on employer's jobs but employer hasn't responded
+          const { data: pendingSwipes, error: swipesError } = await supabase
+            .from("swipes")
+            .select("applicant_id, job_posting_id")
+            .eq("employer_id", user.id)
+            .eq("applicant_dir", "right")
+            .is("employer_dir", null);
 
-        const applicantIds = [...new Set(pendingSwipes.map((s) => s.applicant_id))];
-        const jobPostingIds = [
-          ...new Set(
-            pendingSwipes.map((s) => s.job_posting_id).filter(Boolean) as string[],
-          ),
-        ];
+          console.log("[Discover] employer pending swipes:", JSON.stringify(pendingSwipes), "error:", swipesError?.message);
 
-        const [{ data: profiles }, { data: jobNames }] = await Promise.all([
-          supabase.from("Applicant").select("*").in("id", applicantIds),
-          supabase
-            .from("job_postings")
-            .select("id, job_name")
-            .in("id", jobPostingIds),
-        ]);
+          if (!pendingSwipes?.length) { setLoading(false); return; }
 
-        const cards: ApplicantCardData[] = pendingSwipes
-          .map((swipe) => {
-            const profile = (profiles ?? []).find(
-              (a) => a.id === swipe.applicant_id,
-            );
-            const job = (jobNames ?? []).find(
-              (j) => j.id === swipe.job_posting_id,
-            );
-            if (!profile) return null;
+          const applicantIds = [...new Set(pendingSwipes.map((s) => s.applicant_id))];
+          const jobPostingIds = [...new Set(pendingSwipes.map((s) => s.job_posting_id).filter(Boolean) as string[])];
+
+          const [{ data: profiles }, { data: jobNames }] = await Promise.all([
+            supabase.from("Applicant").select("*").in("id", applicantIds),
+            supabase.from("job_postings").select("id, job_name").in("id", jobPostingIds),
+          ]);
+
+          const cards: ApplicantCardData[] = pendingSwipes.map((swipe) => {
+            const profile = (profiles ?? []).find((a) => a.id === swipe.applicant_id);
+            const job = (jobNames ?? []).find((j) => j.id === swipe.job_posting_id);
             return {
-              ...profile,
+              id: swipe.applicant_id,
+              f_name: profile?.f_name ?? "Applicant",
+              l_name: profile?.l_name ?? "",
+              address: profile?.address,
+              bio: profile?.bio,
+              skills: profile?.skills,
+              experience: profile?.experience,
+              education: profile?.education,
+              profile_pic: profile?.profile_pic,
               job_posting_id: swipe.job_posting_id,
               applied_for: job?.job_name,
             } as ApplicantCardData;
-          })
-          .filter(Boolean) as ApplicantCardData[];
+          });
 
-        setApplicants(cards);
+          setApplicants(cards);
+        }
+
+        setLoading(false);
       }
 
-      setLoading(false);
-    }
-    loadData();
-  }, []);
+      loadData();
+    }, []),
+  );
 
   const handleJobSwipeRight = async (index: number) => {
     const posting = jobPostings[index];
     if (!currentUserId) return;
+
+    console.log("[SwipeRight] applicant:", currentUserId, "→ job:", posting.id, "employer:", posting.employer_id);
 
     const { error } = await supabase
       .from("swipes")
@@ -231,6 +330,8 @@ export default function Discover() {
         },
         { onConflict: "applicant_id,employer_id,job_posting_id" },
       );
+
+    console.log("[SwipeRight] write error:", error?.message ?? "none");
 
     // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
@@ -346,8 +447,8 @@ export default function Discover() {
         ? "Discover top talent"
         : "Discover";
 
-  const hasCards =
-    role === "applicant" ? jobPostings.length > 0 : applicants.length > 0;
+  const displayJobs = [...DEMO_JOB_POSTINGS, ...jobPostings];
+  const displayApplicants = [...DEMO_APPLICANTS, ...applicants];
 
   return (
     <View style={styles.container}>
@@ -366,28 +467,55 @@ export default function Discover() {
       </View>
 
       <View style={styles.swiperContainer}>
+        <View style={styles.demoBanner}>
+          <Ionicons name="flask-outline" size={13} color={Colors.textMuted} />
+          <Text style={styles.demoText}>  First 3 cards are samples</Text>
+        </View>
+
         {loading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
-        ) : !hasCards ? (
+        ) : allSwiped ? (
           <View style={styles.centered}>
-            <Ionicons
-              name="search-outline"
-              size={48}
-              color={Colors.textMuted}
-            />
-            <Text style={styles.emptyText}>No profiles to show</Text>
-            <Text style={styles.emptySubtext}>Check back later</Text>
+            <Ionicons name="checkmark-circle-outline" size={64} color={Colors.primary} />
+            <Text style={styles.emptyText}>You're all caught up!</Text>
+            <Text style={styles.emptySubtext}>Check back later for more</Text>
           </View>
         ) : role === "applicant" ? (
           <Swiper
-            key="job-swiper"
+            key={`job-swiper-${refreshKey}`}
             ref={jobSwiperRef}
-            cards={jobPostings}
+            cards={displayJobs}
             renderCard={(posting) => <JobPostingCard posting={posting} />}
-            onSwipedRight={handleJobSwipeRight}
-            onSwipedLeft={handleJobSwipeLeft}
+            onSwipedRight={(i) => {
+              if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
+            }}
+            onSwipedLeft={(i) => {
+              if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
+            }}
+            onSwipedAll={() => setAllSwiped(true)}
+            backgroundColor="transparent"
+            stackSize={3}
+            cardIndex={0}
+            cardVerticalMargin={0}
+            overlayLabels={OVERLAY_LABELS}
+          />
+        ) : role === "employer" ? (
+          <Swiper
+            key={`applicant-swiper-${refreshKey}`}
+            ref={applicantSwiperRef}
+            cards={displayApplicants}
+            renderCard={(applicant) => (
+              <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
+            )}
+            onSwipedRight={(i) => {
+              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
+            }}
+            onSwipedLeft={(i) => {
+              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
+            }}
+            onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
             stackSize={3}
             cardIndex={0}
@@ -395,21 +523,9 @@ export default function Discover() {
             overlayLabels={OVERLAY_LABELS}
           />
         ) : (
-          <Swiper
-            key="applicant-swiper"
-            ref={applicantSwiperRef}
-            cards={applicants}
-            renderCard={(applicant) => (
-              <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
-            )}
-            onSwipedRight={handleApplicantSwipeRight}
-            onSwipedLeft={handleApplicantSwipeLeft}
-            backgroundColor="transparent"
-            stackSize={3}
-            cardIndex={0}
-            cardVerticalMargin={0}
-            overlayLabels={OVERLAY_LABELS}
-          />
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
         )}
       </View>
 
@@ -470,6 +586,19 @@ const styles = StyleSheet.create({
   },
   swiperContainer: {
     flex: 1,
+  },
+  demoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outline,
+  },
+  demoText: {
+    color: Colors.textMuted,
+    fontSize: 12,
   },
   centered: {
     flex: 1,
