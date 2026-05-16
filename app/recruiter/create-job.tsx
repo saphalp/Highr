@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -44,7 +44,7 @@ export default function CreateJobScreen() {
       skills: skillsArray,
       location: location.trim(),
       company_name: company.trim(),
-      salary: pay.trim(),
+      salary: pay.trim() ? Number(pay.trim()) : null,
     });
 
     setSubmitting(false);
@@ -54,7 +54,7 @@ export default function CreateJobScreen() {
       return;
     }
 
-    router.back();
+    router.push("/recruiter/recruiter-job-postings");
   };
 
   return (
@@ -125,6 +125,7 @@ export default function CreateJobScreen() {
           theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
         />
 
+<<<<<<< HEAD
         <Button
           mode="contained"
           style={styles.button}
@@ -216,6 +217,30 @@ export default function CreateJobScreen() {
         Submit Job Posting
       </Button>
 >>>>>>> ceae734... Connect job posting form to Supabase database
+=======
+        <View style={styles.buttonRow}>
+          <Button
+            mode="outlined"
+            style={styles.backButton}
+            labelStyle={styles.backButtonText}
+            disabled={submitting}
+            onPress={() => router.back()}
+          >
+            Back
+          </Button>
+
+          <Button
+            mode="contained"
+            style={styles.submitButton}
+            labelStyle={styles.buttonText}
+            loading={submitting}
+            disabled={submitting}
+            onPress={handleSubmit}
+          >
+            Submit
+          </Button>
+        </View>
+>>>>>>> aad1bd9... Add recruiter job postings page functionality
       </ScrollView>
     </SafeAreaView>
   );
@@ -227,4 +252,8 @@ const styles = StyleSheet.create({
   input: { backgroundColor: Colors.inputBackground, marginBottom: 12 },
   button: { backgroundColor: Colors.primary, borderRadius: 8, marginTop: 16, padding: 4 },
   buttonText: { color: Colors.text, fontWeight: 'bold', fontSize: 16 },
+  buttonRow : { flexDirection: 'row', gap: 12, justifyContent: 'space-between', marginTop: 16 },
+  backButton : { flex: 1, borderRadius : 8, backgroundColor: Colors.primary, padding: 4 },
+  submitButton : { flex: 1, borderRadius : 8, backgroundColor: Colors.primary, padding: 4 },
+  backButtonText : { color: Colors.text, fontWeight: 'bold', fontSize: 16 },
 });
