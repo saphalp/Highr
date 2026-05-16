@@ -8,11 +8,11 @@ type Props = {
   visible: boolean;
   onKeepSwiping: () => void;
   onSendMessage: () => void;
-  jobTitle: string;
-  company: string;
+  name: string;
+  detail?: string;
 };
 
-export default function MatchPopup({ visible, onKeepSwiping, onSendMessage, jobTitle, company }: Props) {
+export default function MatchPopup({ visible, onKeepSwiping, onSendMessage, name, detail }: Props) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const confettiRef = useRef<any>(null);
 
@@ -53,12 +53,11 @@ export default function MatchPopup({ visible, onKeepSwiping, onSendMessage, jobT
 
           <Text style={styles.title}>It's a Match!</Text>
           <Text style={styles.subtitle}>
-            You liked <Text style={styles.highlight}>{jobTitle}</Text> at{' '}
-            <Text style={styles.highlight}>{company}</Text>
+            You matched with <Text style={styles.highlight}>{name}</Text>!
           </Text>
-          <Text style={styles.description}>
-            The employer has also shown interest in your profile!
-          </Text>
+          {detail ? (
+            <Text style={styles.description}>{detail}</Text>
+          ) : null}
 
           <TouchableOpacity style={styles.messageButton} onPress={onSendMessage}>
             <Ionicons name="chatbubble-outline" size={20} color={Colors.text} />
