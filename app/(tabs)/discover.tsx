@@ -12,13 +12,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
+  Animated,
   ActivityIndicator,
+  Dimensions,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const { height } = Dimensions.get('window');
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
+
+const SWIPE_OVERLAYS = {
+  pass:  { color: '#FF6B6B',      icon: 'close-circle'  as const, iconColor: '#FF6B6B', iconBg: '#000000',   label: 'PASS' },
+  like:  { color: Colors.primary, icon: 'heart-circle'  as const, iconColor: Colors.primary, iconBg: '#ffffff', label: 'LIKE' },
+  super: { color: '#00C9FF',      icon: 'star'          as const, iconColor: '#00C9FF', iconBg: 'transparent', label: 'SUPER LIKE' },
+} as const;
 
 type UserRole = "applicant" | "employer" | "unknown";
 
@@ -161,6 +171,24 @@ const OVERLAY_LABELS = {
       },
     },
   },
+  top: {
+    title: "SUPER LIKE",
+    style: {
+      label: {
+        backgroundColor: "#00C9FF",
+        color: "white",
+        fontSize: 24,
+        borderRadius: 8,
+        padding: 8,
+      },
+      wrapper: {
+        flexDirection: "column" as const,
+        alignItems: "center" as const,
+        justifyContent: "flex-start" as const,
+        marginTop: 20,
+      },
+    },
+  },
 };
 
 async function ensureConversationExists(
@@ -228,6 +256,41 @@ export default function Discover() {
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
+
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const overlayScale   = useRef(new Animated.Value(0.5)).current;
+  const [overlayType, setOverlayType] = useState<keyof typeof SWIPE_OVERLAYS | null>(null);
+  const buttonSwipePending = useRef(false);
+
+  const flashSwipeOverlay = (type: keyof typeof SWIPE_OVERLAYS) => {
+    if (buttonSwipePending.current) { buttonSwipePending.current = false; return; }
+    setOverlayType(type);
+    overlayOpacity.setValue(0);
+    overlayScale.setValue(0.8);
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(overlayScale,   { toValue: 1, friction: 6, tension: 200, useNativeDriver: true }),
+        Animated.timing(overlayOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      ]),
+      Animated.delay(300),
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setOverlayType(null));
+  };
+
+  const triggerSwipe = (type: keyof typeof SWIPE_OVERLAYS, doSwipe: () => void) => {
+    buttonSwipePending.current = true;
+    setOverlayType(type);
+    overlayOpacity.setValue(0);
+    overlayScale.setValue(0.5);
+    Animated.parallel([
+      Animated.spring(overlayScale,   { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+    ]).start(() => {
+      doSwipe();
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 350, useNativeDriver: true })
+        .start(() => setOverlayType(null));
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -489,16 +552,23 @@ export default function Discover() {
             cards={displayJobs}
             renderCard={(posting) => <JobPostingCard posting={posting} />}
             onSwipedRight={(i) => {
+              flashSwipeOverlay('like');
               if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
             }}
             onSwipedLeft={(i) => {
+              flashSwipeOverlay('pass');
               if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
+            }}
+            onSwipedTop={(i) => {
+              flashSwipeOverlay('super');
+              if (i >= DEMO_JOB_POSTINGS.length) handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
             stackSize={3}
             cardIndex={0}
             cardVerticalMargin={0}
+            cardStyle={{ height: height * 0.62 }}
             overlayLabels={OVERLAY_LABELS}
           />
         ) : role === "employer" ? (
@@ -510,16 +580,23 @@ export default function Discover() {
               <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
             )}
             onSwipedRight={(i) => {
+              flashSwipeOverlay('like');
               if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedLeft={(i) => {
+              flashSwipeOverlay('pass');
               if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
+            }}
+            onSwipedTop={(i) => {
+              flashSwipeOverlay('super');
+              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
             stackSize={3}
             cardIndex={0}
             cardVerticalMargin={0}
+            cardStyle={{ height: height * 0.62 }}
             overlayLabels={OVERLAY_LABELS}
           />
         ) : (
@@ -529,14 +606,31 @@ export default function Discover() {
         )}
       </View>
 
+      {overlayType && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.swipeOverlay, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}
+        >
+          <View style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}>
+            <View style={styles.swipeIconWrapper}>
+              <View style={[styles.swipeIconBg, { backgroundColor: SWIPE_OVERLAYS[overlayType].iconBg }]} />
+              <Ionicons name={SWIPE_OVERLAYS[overlayType].icon} size={56} color={SWIPE_OVERLAYS[overlayType].iconColor} />
+            </View>
+            <Text style={[styles.swipeOverlayText, { color: SWIPE_OVERLAYS[overlayType].color }]}>
+              {SWIPE_OVERLAYS[overlayType].label}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.passButton} onPress={swipeLeft}>
+        <TouchableOpacity style={styles.passButton} onPress={() => triggerSwipe('pass', swipeLeft)}>
           <Ionicons name="close" size={32} color="#FF6B6B" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.superLikeButton} onPress={swipeTop}>
+        <TouchableOpacity style={styles.superLikeButton} onPress={() => triggerSwipe('super', swipeTop)}>
           <Ionicons name="star" size={24} color="#00C9FF" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.likeButton} onPress={swipeRight}>
+        <TouchableOpacity style={styles.likeButton} onPress={() => triggerSwipe('like', swipeRight)}>
           <Ionicons name="heart" size={32} color={Colors.text} />
         </TouchableOpacity>
       </View>
@@ -585,7 +679,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   swiperContainer: {
-    flex: 1,
+    height: height * 0.62 + 36,
   },
   demoBanner: {
     flexDirection: "row",
@@ -658,5 +752,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
+  },
+  swipeOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  swipeOverlayBadge: {
+    backgroundColor: 'transparent',
+    borderRadius: 24,
+    borderWidth: 3,
+    paddingVertical: 24,
+    paddingHorizontal: 40,
+    alignItems: "center",
+    gap: 8,
+  },
+  swipeIconWrapper: {
+    width: 56,
+    height: 56,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  swipeIconBg: {
+    position: "absolute",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+  },
+  swipeOverlayText: {
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });
