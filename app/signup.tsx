@@ -3,7 +3,7 @@ import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 
 export default function SignupScreen() {
@@ -105,6 +105,12 @@ export default function SignupScreen() {
         }}
       />
 
+      <Pressable style={styles.googleButton} onPress={() => console.log("Google sign-in pressed")}>
+        <Text style={styles.googleButtonText}>Continue with Google</Text>
+      </Pressable>
+
+      <Text style={styles.orText}>or sign up with email</Text>
+
       <Button
         mode="contained"
         style={styles.buttonPrimary}
@@ -122,6 +128,7 @@ export default function SignupScreen() {
       >
         Sign Up as Employer
       </Button>
+
 
       <MessageBar message={message} type={messageType} />
 
@@ -188,4 +195,28 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "bold",
   },
+
+  googleButton: {
+  width: "100%",
+  paddingVertical: 14,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "#d1d5db",
+  backgroundColor: "#ffffff",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 14,
+},
+
+googleButtonText: {
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#111827",
+},
+
+orText: {
+  textAlign: "center",
+  color: "#6b7280",
+  marginBottom: 16,
+},
 });
