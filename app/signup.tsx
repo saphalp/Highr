@@ -1,10 +1,14 @@
 import MessageBar from "@/components/MessageBar";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -20,16 +24,19 @@ export default function SignupScreen() {
       setMessage("Passwords do not match.");
       return;
     }
+
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: { data: { role: "applicant" } },
     });
+
     if (error) {
       setMessageType("error");
       setMessage(error.message);
       return;
     }
+
     setMessageType("info");
     setMessage(`Confirmation link sent to ${email}`);
     router.push("/login");
@@ -41,19 +48,83 @@ export default function SignupScreen() {
       setMessage("Passwords do not match.");
       return;
     }
+
     const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: { data: { role: "employer" } },
     });
+
     if (error) {
       setMessageType("error");
       setMessage(error.message);
       return;
     }
+
     setMessageType("info");
     setMessage(`Confirmation link sent to ${email}`);
     router.push("/login");
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: "highr",
+        path: "auth/callback",
+      });
+
+      console.log("Google Redirect URL:", redirectTo);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        setMessageType("error");
+        setMessage(error.message);
+        return;
+      }
+
+      if (!data?.url) {
+        setMessageType("error");
+        setMessage("Google sign-in URL was not created.");
+        return;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo
+      );
+
+      if (result.type === "success") {
+        const url = new URL(result.url);
+        const code = url.searchParams.get("code");
+
+        if (!code) {
+          setMessageType("error");
+          setMessage("No auth code returned from Google.");
+          return;
+        }
+
+        const { error: sessionError } =
+          await supabase.auth.exchangeCodeForSession(code);
+
+        if (sessionError) {
+          setMessageType("error");
+          setMessage(sessionError.message);
+          return;
+        }
+
+        router.replace("/profile-setup");
+      }
+    } catch (err: any) {
+      setMessageType("error");
+      setMessage(err.message ?? "Google sign-in failed.");
+    }
   };
   return (
     <View style={styles.container}>
@@ -105,11 +176,12 @@ export default function SignupScreen() {
         }}
       />
 
-      <Pressable style={styles.googleButton} onPress={() => console.log("Google sign-in pressed")}>
+      <Pressable
+        style={styles.googleButton}
+        onPress={handleGoogleSignIn}
+      >
         <Text style={styles.googleButtonText}>Continue with Google</Text>
       </Pressable>
-
-      <Text style={styles.orText}>or sign up with email</Text>
 
       <Button
         mode="contained"
