@@ -2,18 +2,79 @@ import ChatCard, { ChatPreview } from "@/components/ChatCard";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
 type UserRole = "applicant" | "employer" | "unknown";
+
+function formatTimestamp(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+async function getOrCreateMatchId(
+  applicantId: string,
+  employerId: string,
+  jobPostingId: string | null,
+): Promise<string | null> {
+  let query = supabase
+    .from("matches")
+    .select("id")
+    .eq("applicant_id", applicantId)
+    .eq("employer_id", employerId);
+
+  if (jobPostingId) query = query.eq("job_posting_id", jobPostingId);
+  else query = query.is("job_posting_id", null);
+
+  const { data: existing } = await query.maybeSingle();
+  if (existing) return existing.id;
+
+  const { data: created } = await supabase
+    .from("matches")
+    .insert({ applicant_id: applicantId, employer_id: employerId, job_posting_id: jobPostingId, status: "active" })
+    .select("id")
+    .single();
+
+  return created?.id ?? null;
+}
+
+async function getOrCreateConversationId(matchId: string): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: created } = await supabase
+    .from("conversations")
+    .insert({ match_id: matchId })
+    .select("id")
+    .single();
+
+  return created?.id ?? null;
+}
 
 export default function Matches() {
   const [role, setRole] = useState<UserRole>("unknown");
   const [matches, setMatches] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      setMatches([]);
     async function loadMatches() {
       const {
         data: { user },
@@ -26,6 +87,8 @@ export default function Matches() {
       const userRole: UserRole = user.user_metadata?.role ?? "unknown";
       setRole(userRole);
 
+      const previews: ChatPreview[] = [];
+
       if (userRole === "applicant") {
         const { data: swipeMatches } = await supabase
           .from("swipes")
@@ -34,56 +97,103 @@ export default function Matches() {
           .eq("applicant_dir", "right")
           .eq("employer_dir", "right");
 
-        if (swipeMatches?.length) {
-          const employerIds = swipeMatches.map((s) => s.employer_id);
-          const { data: employers } = await supabase
-            .from("Employer")
-            .select("id, company_name, logo")
-            .in("id", employerIds);
-
-          setMatches(
-            (employers ?? []).map((emp) => ({
-              id: emp.id,
-              name: emp.company_name,
-              profilePicture: emp.logo ?? null,
-              lastMessage: "You matched! Say hello 👋",
-              timestamp: "New",
-              unread: true,
-            })),
+        for (const swipe of swipeMatches ?? []) {
+          const matchId = await getOrCreateMatchId(
+            user.id,
+            swipe.employer_id,
+            swipe.job_posting_id ?? null,
           );
+          if (!matchId) continue;
+
+          const conversationId = await getOrCreateConversationId(matchId);
+          if (!conversationId) continue;
+
+          const [{ data: employer }, { data: latestMsg }] = await Promise.all([
+            supabase
+              .from("Employer")
+              .select("id, company_name, logo")
+              .eq("id", swipe.employer_id)
+              .single(),
+            supabase
+              .from("messages")
+              .select("content, created_at")
+              .eq("conversation_id", conversationId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
+
+          if (!employer) continue;
+
+          previews.push({
+            id: employer.id,
+            name: employer.company_name,
+            profilePicture: employer.logo ?? null,
+            lastMessage: latestMsg?.content ?? "You matched! Say hello 👋",
+            timestamp: latestMsg?.created_at
+              ? formatTimestamp(new Date(latestMsg.created_at))
+              : "New",
+            unread: false,
+            conversationId,
+          });
         }
       } else if (userRole === "employer") {
         const { data: swipeMatches } = await supabase
           .from("swipes")
-          .select("applicant_id")
+          .select("applicant_id, job_posting_id")
           .eq("employer_id", user.id)
           .eq("applicant_dir", "right")
           .eq("employer_dir", "right");
 
-        if (swipeMatches?.length) {
-          const applicantIds = swipeMatches.map((s) => s.applicant_id);
-          const { data: applicants } = await supabase
-            .from("Applicant")
-            .select("id, f_name, l_name, profile_pic")
-            .in("id", applicantIds);
-
-          setMatches(
-            (applicants ?? []).map((app) => ({
-              id: app.id,
-              name: `${app.f_name ?? ""} ${app.l_name ?? ""}`.trim(),
-              profilePicture: app.profile_pic ?? null,
-              lastMessage: "You matched! Say hello 👋",
-              timestamp: "New",
-              unread: true,
-            })),
+        for (const swipe of swipeMatches ?? []) {
+          const matchId = await getOrCreateMatchId(
+            swipe.applicant_id,
+            user.id,
+            swipe.job_posting_id ?? null,
           );
+          if (!matchId) continue;
+
+          const conversationId = await getOrCreateConversationId(matchId);
+          if (!conversationId) continue;
+
+          const [{ data: applicant }, { data: latestMsg }] = await Promise.all([
+            supabase
+              .from("Applicant")
+              .select("id, f_name, l_name, profile_pic")
+              .eq("id", swipe.applicant_id)
+              .single(),
+            supabase
+              .from("messages")
+              .select("content, created_at")
+              .eq("conversation_id", conversationId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
+
+          if (!applicant) continue;
+
+          previews.push({
+            id: applicant.id,
+            name: `${applicant.f_name ?? ""} ${applicant.l_name ?? ""}`.trim(),
+            profilePicture: applicant.profile_pic ?? null,
+            lastMessage: latestMsg?.content ?? "You matched! Say hello 👋",
+            timestamp: latestMsg?.created_at
+              ? formatTimestamp(new Date(latestMsg.created_at))
+              : "New",
+            unread: false,
+            conversationId,
+          });
         }
       }
 
+      setMatches(previews);
       setLoading(false);
     }
+
     loadMatches();
-  }, []);
+    }, []),
+  );
 
   return (
     <View style={styles.container}>
@@ -96,9 +206,7 @@ export default function Matches() {
       ) : matches.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>
-            Keep swiping to find your match
-          </Text>
+          <Text style={styles.emptySubtext}>Keep swiping to find your match</Text>
         </View>
       ) : (
         <ScrollView
@@ -113,10 +221,9 @@ export default function Matches() {
                 router.push({
                   pathname: "/chat",
                   params: {
-                    id: chat.id,
                     name: chat.name,
                     profilePicture: chat.profilePicture ?? "",
-                    lastMessage: chat.lastMessage,
+                    conversationId: chat.conversationId,
                   },
                 })
               }
@@ -158,9 +265,5 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: 24,
-  },
-  recruiterButton: {
-    marginVertical: 16,
-    borderColor: Colors.outline,
   },
 });

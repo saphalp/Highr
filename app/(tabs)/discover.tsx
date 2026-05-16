@@ -65,6 +65,57 @@ const OVERLAY_LABELS = {
   },
 };
 
+async function ensureConversationExists(
+  applicantId: string,
+  employerId: string,
+  jobPostingId: string | null,
+) {
+  console.log("[ensureConversation] start", { applicantId, employerId, jobPostingId });
+
+  let matchQuery = supabase
+    .from("matches")
+    .select("id")
+    .eq("applicant_id", applicantId)
+    .eq("employer_id", employerId);
+  if (jobPostingId) matchQuery = matchQuery.eq("job_posting_id", jobPostingId);
+  else matchQuery = matchQuery.is("job_posting_id", null);
+
+  const { data: existingMatch, error: selectError } = await matchQuery.maybeSingle();
+  if (selectError) console.error("[ensureConversation] match select error:", selectError);
+
+  let match = existingMatch;
+
+  if (!match) {
+    const { data: created, error: insertError } = await supabase
+      .from("matches")
+      .insert({ applicant_id: applicantId, employer_id: employerId, job_posting_id: jobPostingId, status: "active" })
+      .select("id")
+      .single();
+    if (insertError) console.error("[ensureConversation] match insert error:", insertError);
+    match = created;
+  }
+
+  console.log("[ensureConversation] match:", match);
+  if (!match) return;
+
+  const { data: existing, error: convSelectError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("match_id", match.id)
+    .maybeSingle();
+  if (convSelectError) console.error("[ensureConversation] conv select error:", convSelectError);
+
+  if (!existing) {
+    const { error: convInsertError } = await supabase
+      .from("conversations")
+      .insert({ match_id: match.id });
+    if (convInsertError) console.error("[ensureConversation] conv insert error:", convInsertError);
+    else console.log("[ensureConversation] conversation created for match", match.id);
+  } else {
+    console.log("[ensureConversation] conversation already exists:", existing.id);
+  }
+}
+
 export default function Discover() {
   const [role, setRole] = useState<UserRole>("unknown");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -181,7 +232,8 @@ export default function Discover() {
         { onConflict: "applicant_id,employer_id,job_posting_id" },
       );
 
-    if (error) {
+    // 23505 = unique_violation: swipe already exists, which is fine — proceed
+    if (error && error.code !== "23505") {
       console.error("Swipe upsert failed:", error.message);
       return;
     }
@@ -196,6 +248,7 @@ export default function Discover() {
       .single();
 
     if (data?.employer_dir === "right") {
+      ensureConversationExists(currentUserId, posting.employer_id, posting.id);
       setMatchName(posting.job_name);
       setMatchDetail(posting.company_name);
       setMatchVisible(true);
@@ -222,10 +275,11 @@ export default function Discover() {
   };
 
   // Employers only see applicants who already swiped right, so a right swipe is always a match
-  const handleApplicantSwipeRight = (index: number) => {
+  const handleApplicantSwipeRight = async (index: number) => {
     if (!currentUserId) return;
     const applicant = applicants[index];
-    supabase
+
+    const { error } = await supabase
       .from("swipes")
       .upsert(
         {
@@ -235,10 +289,15 @@ export default function Discover() {
           job_posting_id: applicant.job_posting_id,
         },
         { onConflict: "applicant_id,employer_id,job_posting_id" },
-      )
-      .then(({ error }) => {
-        if (error) console.error("Swipe upsert failed:", error.message);
-      });
+      );
+
+    // 23505 = unique_violation: swipe already exists, which is fine — proceed
+    if (error && error.code !== "23505") {
+      console.error("Swipe upsert failed:", error.message);
+      return;
+    }
+
+    ensureConversationExists(applicant.id, currentUserId, applicant.job_posting_id);
 
     const name = `${applicant.f_name ?? ""} ${applicant.l_name ?? ""}`.trim();
     setMatchName(name || "this applicant");
