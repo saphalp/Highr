@@ -23,7 +23,7 @@ export type EmployerRow = {
 export default function EmployerCard({ employer }: { employer: EmployerRow }) {
   const location = [employer.city, employer.country].filter(Boolean).join(', ');
   const workTypes = employer.work_types ?? [];
-  const initial = (employer.company_name ?? '?')[0].toUpperCase();
+  const initial = (employer.company_name || '?')[0].toUpperCase();
 
   return (
     <View style={styles.card}>

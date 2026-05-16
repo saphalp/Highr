@@ -18,9 +18,15 @@ export type ApplicantRow = {
   profile_pic?: string;
 };
 
-export default function ApplicantCard({ applicant }: { applicant: ApplicantRow }) {
+export default function ApplicantCard({
+  applicant,
+  appliedFor,
+}: {
+  applicant: ApplicantRow;
+  appliedFor?: string;
+}) {
   const fullName = `${applicant.f_name ?? ''} ${applicant.l_name ?? ''}`.trim();
-  const initial = (applicant.f_name ?? '?')[0].toUpperCase();
+  const initial = (applicant.f_name || '?')[0].toUpperCase();
   const topSkills = (applicant.skills ?? []).slice(0, 4);
   const latestExp = (applicant.experience ?? [])[0];
   const latestEdu = (applicant.education ?? [])[0];
@@ -69,6 +75,12 @@ export default function ApplicantCard({ applicant }: { applicant: ApplicantRow }
             <Text style={styles.infoText} numberOfLines={1}>
               {' '}{latestEdu.degree} in {latestEdu.field}, {latestEdu.institution}
             </Text>
+          </View>
+        ) : null}
+        {appliedFor ? (
+          <View style={styles.appliedRow}>
+            <Ionicons name="briefcase-outline" size={12} color={Colors.primary} />
+            <Text style={styles.appliedText} numberOfLines={1}> Applied for: {appliedFor}</Text>
           </View>
         ) : null}
       </View>
@@ -174,5 +186,19 @@ const styles = StyleSheet.create({
   tagText: {
     color: Colors.textMuted,
     fontSize: 11,
+  },
+  appliedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outline,
+  },
+  appliedText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
 });
