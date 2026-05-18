@@ -6,6 +6,11 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Text } from "react-native-paper";
 
 export default function Profile() {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
@@ -17,6 +22,13 @@ export default function Profile() {
       } = await supabase.auth.getUser();
 
       setRole(user?.user_metadata?.role || null);
+      setEmail(user?.email || "");
+      setDisplayName(
+        user?.user_metadata?.first_name ||
+          user?.user_metadata?.f_name ||
+          user?.email?.split("@")[0] ||
+          "there",
+      );
     };
 
     getUserRole();
@@ -25,38 +37,23 @@ export default function Profile() {
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
+  const hour = new Date().getHours();
 
-    if (error) {
-      console.log("Logout error:", error.message);
-      return;
-    }
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-    router.replace("/login");
-  };
-
-  const handleEditProfile = () => {
-    if (isApplicant) {
-      router.push("/applicant/edit-profile-applicant");
-      return;
-    }
-
-    if (isEmployer) {
-      router.push("/recruiter/edit-profile-recruiter");
-      return;
-    }
-
-    router.push("/role-selection");
-  };
+  const roleLabel = isEmployer
+    ? "Recruiter"
+    : isApplicant
+      ? "Applicant"
+      : "User";
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>{greeting}, {displayName}</Text>
+        <Text style={styles.greeting}>
+          {greeting}, {displayName}
+        </Text>
       </View>
 
       <Card style={styles.summaryCard}>
@@ -75,8 +72,14 @@ export default function Profile() {
 
       <Button
         mode="contained"
-        onPress={handleEditProfile}
-        style={styles.editButton}
+        onPress={() => {
+          if (isApplicant) {
+            router.push("/applicant/edit-profile-applicant");
+          } else if (isEmployer) {
+            router.push("/recruiter/edit-profile-recruiter");
+          }
+        }}
+        style={styles.actionButton}
       >
         Edit Profile
       </Button>
@@ -85,7 +88,7 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/recruiter/recruiter-job-postings")}
-          style={styles.editButton}
+          style={styles.actionButton}
         >
           My Job Postings
         </Button>
@@ -95,18 +98,29 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/preview-card" as any)}
-          style={styles.editButton}
+          style={styles.actionButton}
         >
           Preview Card
         </Button>
       )}
 
+      <Text style={styles.sectionTitle}>Account</Text>
+
       <Button
         mode="outlined"
         onPress={() => router.push("/terms-and-conditions")}
-        style={styles.termsButton}
+        style={styles.actionButton}
       >
         Terms and Conditions
+      </Button>
+
+      <Button
+        mode="outlined"
+        onPress={() => router.push("/change-password" as any)}
+        style={styles.passwordButton}
+        labelStyle={styles.passwordLabel}
+      >
+        Change Password
       </Button>
 
       <Button
@@ -181,10 +195,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
-  termsButton: {
-    width: "100%",
-    borderRadius: 8,
-  },
   logoutButton: {
     width: "100%",
     borderRadius: 8,
@@ -193,5 +203,15 @@ const styles = StyleSheet.create({
   },
   logoutLabel: {
     color: Colors.error,
+  },
+  passwordButton: {
+    width: "100%",
+    borderRadius: 8,
+    borderColor: "#E6A23C",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  passwordLabel: {
+    color: "#E6A23C",
   },
 });
