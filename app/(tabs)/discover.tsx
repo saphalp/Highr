@@ -13,8 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
-  Animated,
   ActivityIndicator,
+  Animated,
+  Dimensions,
   Modal,
   ScrollView,
   StyleSheet,
@@ -22,15 +23,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const { height } = Dimensions.get('window');
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
 
+const { height } = Dimensions.get("window");
+
 const SWIPE_OVERLAYS = {
-  pass:  { color: '#FF6B6B',      icon: 'close-circle'  as const, iconColor: '#FF6B6B', iconBg: '#000000',   label: 'PASS' },
-  like:  { color: Colors.primary, icon: 'heart-circle'  as const, iconColor: Colors.primary, iconBg: '#ffffff', label: 'LIKE' },
-  super: { color: '#00C9FF',      icon: 'star'          as const, iconColor: '#00C9FF', iconBg: 'transparent', label: 'SUPER LIKE' },
+  pass: {
+    color: "#FF6B6B",
+    icon: "close-circle" as const,
+    iconColor: "#FF6B6B",
+    iconBg: "#000000",
+    label: "PASS",
+  },
+  like: {
+    color: Colors.primary,
+    icon: "heart-circle" as const,
+    iconColor: Colors.primary,
+    iconBg: "#ffffff",
+    label: "LIKE",
+  },
+  super: {
+    color: "#00C9FF",
+    icon: "star" as const,
+    iconColor: "#00C9FF",
+    iconBg: "transparent",
+    label: "SUPER LIKE",
+  },
 } as const;
 
 type UserRole = "applicant" | "employer" | "unknown";
@@ -371,7 +390,10 @@ async function ensureConversationExists(
       );
     }
   } else {
-    console.log("[ensureConversation] conversation already exists:", existing.id);
+    console.log(
+      "[ensureConversation] conversation already exists:",
+      existing.id,
+    );
   }
 }
 
@@ -397,37 +419,70 @@ export default function Discover() {
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const overlayScale   = useRef(new Animated.Value(0.5)).current;
-  const [overlayType, setOverlayType] = useState<keyof typeof SWIPE_OVERLAYS | null>(null);
+  const overlayScale = useRef(new Animated.Value(0.5)).current;
+  const [overlayType, setOverlayType] = useState<
+    keyof typeof SWIPE_OVERLAYS | null
+  >(null);
   const buttonSwipePending = useRef(false);
 
   const flashSwipeOverlay = (type: keyof typeof SWIPE_OVERLAYS) => {
-    if (buttonSwipePending.current) { buttonSwipePending.current = false; return; }
+    if (buttonSwipePending.current) {
+      buttonSwipePending.current = false;
+      return;
+    }
     setOverlayType(type);
     overlayOpacity.setValue(0);
     overlayScale.setValue(0.8);
     Animated.sequence([
       Animated.parallel([
-        Animated.spring(overlayScale,   { toValue: 1, friction: 6, tension: 200, useNativeDriver: true }),
-        Animated.timing(overlayOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+        Animated.spring(overlayScale, {
+          toValue: 1,
+          friction: 6,
+          tension: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
       ]),
       Animated.delay(300),
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
     ]).start(() => setOverlayType(null));
   };
 
-  const triggerSwipe = (type: keyof typeof SWIPE_OVERLAYS, doSwipe: () => void) => {
+  const triggerSwipe = (
+    type: keyof typeof SWIPE_OVERLAYS,
+    doSwipe: () => void,
+  ) => {
     buttonSwipePending.current = true;
     setOverlayType(type);
     overlayOpacity.setValue(0);
     overlayScale.setValue(0.5);
     Animated.parallel([
-      Animated.spring(overlayScale,   { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      Animated.spring(overlayScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
       doSwipe();
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 350, useNativeDriver: true })
-        .start(() => setOverlayType(null));
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }).start(() => setOverlayType(null));
     });
   };
 
@@ -732,10 +787,7 @@ export default function Discover() {
           return (
             <TouchableOpacity
               key={option}
-              style={[
-                styles.filterChip,
-                selected && styles.filterChipSelected,
-              ]}
+              style={[styles.filterChip, selected && styles.filterChipSelected]}
               onPress={() =>
                 toggleValue(option, selectedValues, setSelectedValues)
               }
@@ -755,9 +807,7 @@ export default function Discover() {
     );
   };
 
-  const getNumberFromSalary = (
-    salary: string | number | undefined | null,
-  ) => {
+  const getNumberFromSalary = (salary: string | number | undefined | null) => {
     if (!salary) return 0;
 
     if (typeof salary === "number") return salary;
@@ -872,7 +922,7 @@ export default function Discover() {
       <View style={styles.swiperContainer}>
         <View style={styles.demoBanner}>
           <Ionicons name="flask-outline" size={13} color={Colors.textMuted} />
-          <Text style={styles.demoText}>  First 3 cards are samples</Text>
+          <Text style={styles.demoText}> First 3 cards are samples</Text>
         </View>
 
         {loading ? (
@@ -968,8 +1018,9 @@ export default function Discover() {
               }
             }}
             onSwipedTop={(i) => {
-              flashSwipeOverlay('super');
-              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
+              flashSwipeOverlay("super");
+              if (i >= DEMO_APPLICANTS.length)
+                handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
@@ -989,14 +1040,36 @@ export default function Discover() {
       {overlayType && (
         <Animated.View
           pointerEvents="none"
-          style={[styles.swipeOverlay, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}
+          style={[
+            styles.swipeOverlay,
+            { opacity: overlayOpacity, transform: [{ scale: overlayScale }] },
+          ]}
         >
-          <View style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}>
+          <View
+            style={[
+              styles.swipeOverlayBadge,
+              { borderColor: SWIPE_OVERLAYS[overlayType].color },
+            ]}
+          >
             <View style={styles.swipeIconWrapper}>
-              <View style={[styles.swipeIconBg, { backgroundColor: SWIPE_OVERLAYS[overlayType].iconBg }]} />
-              <Ionicons name={SWIPE_OVERLAYS[overlayType].icon} size={56} color={SWIPE_OVERLAYS[overlayType].iconColor} />
+              <View
+                style={[
+                  styles.swipeIconBg,
+                  { backgroundColor: SWIPE_OVERLAYS[overlayType].iconBg },
+                ]}
+              />
+              <Ionicons
+                name={SWIPE_OVERLAYS[overlayType].icon}
+                size={56}
+                color={SWIPE_OVERLAYS[overlayType].iconColor}
+              />
             </View>
-            <Text style={[styles.swipeOverlayText, { color: SWIPE_OVERLAYS[overlayType].color }]}>
+            <Text
+              style={[
+                styles.swipeOverlayText,
+                { color: SWIPE_OVERLAYS[overlayType].color },
+              ]}
+            >
               {SWIPE_OVERLAYS[overlayType].label}
             </Text>
           </View>
@@ -1004,7 +1077,10 @@ export default function Discover() {
       )}
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.passButton} onPress={() => triggerSwipe('pass', swipeLeft)}>
+        <TouchableOpacity
+          style={styles.passButton}
+          onPress={() => triggerSwipe("pass", swipeLeft)}
+        >
           <Ionicons name="close" size={32} color="#FF6B6B" />
         </TouchableOpacity>
 
@@ -1225,6 +1301,45 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: Colors.textMuted,
     fontSize: 14,
+  },
+  swipeOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  swipeOverlayBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 24,
+    borderRadius: 24,
+    borderWidth: 3,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    minWidth: 160,
+  },
+  swipeIconWrapper: {
+    position: "relative",
+    width: 72,
+    height: 72,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  swipeIconBg: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  swipeOverlayText: {
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
   buttonRow: {
     flexDirection: "row",
