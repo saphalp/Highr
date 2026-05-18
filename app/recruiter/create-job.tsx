@@ -63,7 +63,6 @@ export default function CreateJobScreen() {
       <ScrollView>
         <Text style={styles.title}>Create Job Posting</Text>
 
-<<<<<<< HEAD
         <TextInput
           label="Job Name"
           mode="outlined"
@@ -125,99 +124,6 @@ export default function CreateJobScreen() {
           theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
         />
 
-<<<<<<< HEAD
-        <Button
-          mode="contained"
-          style={styles.button}
-          labelStyle={styles.buttonText}
-          loading={submitting}
-          disabled={submitting}
-          onPress={handleSubmit}
-        >
-          Submit Job Posting
-        </Button>
-=======
-      <TextInput    // text input for job name
-        label="Job Name"
-        mode="outlined"
-        value={jobName}
-        onChangeText={setJobName}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // for now just a text input for description, but in future can be a rich text editor
-        label="Job Description"
-        mode="outlined"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // for now just a text input for skills
-        label="Relevant Skills (comma separated)"
-        mode="outlined"
-        value={skills}
-        onChangeText={setSkills}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // text input for location
-        label="Location"
-        mode="outlined"
-        value={location}
-        onChangeText={setLocation}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // for now just a text input, but in future can be a dropdown with company names associated with that specific recruiter
-        label="Company Name"
-        mode="outlined"
-        value={company}
-        onChangeText={setCompany}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // for now just a text input, but in future can add a dropdown for salary range and pay type (hourly or salary)
-        label="Estimated Pay"
-        mode="outlined"
-        value={pay}
-        onChangeText={setPay}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <TextInput    // for now just a text input for hours, but in future can be dropdown
-        label="Work Hours"
-        mode="outlined"
-        value={hours}
-        onChangeText={setHours}
-        style={styles.input}
-        textColor={Colors.text}
-        theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-      />
-
-      <Button
-        mode="contained"
-        style={styles.button}
-        labelStyle={styles.buttonText}
-        onPress={handleSubmit}
-      >
-        Submit Job Posting
-      </Button>
->>>>>>> ceae734... Connect job posting form to Supabase database
-=======
         <View style={styles.buttonRow}>
           <Button
             mode="outlined"
@@ -240,7 +146,6 @@ export default function CreateJobScreen() {
             Submit
           </Button>
         </View>
->>>>>>> aad1bd9... Add recruiter job postings page functionality
       </ScrollView>
     </SafeAreaView>
   );

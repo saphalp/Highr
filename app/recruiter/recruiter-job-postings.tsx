@@ -1,17 +1,10 @@
 import RecruiterJobPostingCard from '@/components/RecruiterJobPostingCard';
 import { Colors } from '@/constants/theme';
-<<<<<<< HEAD
 import { supabase } from '@/lib/supabase';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text } from 'react-native-paper';
-=======
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
->>>>>>> 4a6996d... feat: fix swipe logic, refresh on focus, styled cards and tab bar
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type JobPosting = {
@@ -23,10 +16,39 @@ type JobPosting = {
   description: string;
   skills: string[] | null;
   salary: number | null;
+  active: boolean;
 };
 
 export default function RecruiterJobPostings() {
   const router = useRouter();
+
+  const toggleJobPostingActive = async (jobId: number, currentActive: boolean) => {
+    const { error } = await supabase
+      .from('job_postings')
+      .update({ active: !currentActive })
+      .eq('id', jobId);
+
+    if (error) {
+      Alert.alert("Error", "Failed to update job posting status.");
+      return;
+    }
+
+    setJobPostings((currentJobs) =>
+      currentJobs.map((job) => (job.id === jobId ? { ...job, active: !currentActive } : job))
+    );
+  };
+
+  const confirmDeleteJobPosting = (jobId: number) => {
+    Alert.alert(
+      'Confirm Delete',
+      'This will delete this job posting and all associated data, including any matches and conversations. If you only want to hide this job, use the Enable/Disable button instead.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteJobPosting(jobId) }
+      ]
+    );
+  };
+
 
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,10 +101,23 @@ export default function RecruiterJobPostings() {
     fetchJobPostings();
   },[]);
 
+  const deleteJobPosting = async (jobId: number) => {
+    const { error } = await supabase
+      .from('job_postings')
+      .delete()
+      .eq('id', jobId);
+    
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setJobPostings((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
     <Stack.Screen options={{ headerShown: false }} />
-<<<<<<< HEAD
     <ScrollView
       onScroll={handleScroll}
       scrollEventThrottle={16}
@@ -129,6 +164,9 @@ export default function RecruiterJobPostings() {
               title={job.job_name}
               subtitle={`${job.company_name} | ${job.location}`}
               description={`$${job.salary ?? 'N/A'} | ${(job.skills || []).join(', ')}`}
+              active={job.active}
+              onToggleActive={() => toggleJobPostingActive(job.id, job.active)}
+              onDelete={() => confirmDeleteJobPosting(job.id)}
             />
           </Pressable>
         ))
