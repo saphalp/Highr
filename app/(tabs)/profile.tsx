@@ -15,6 +15,8 @@ export default function Profile() {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
 
+
+
   useEffect(() => {
     const getUserRole = async () => {
       const {
@@ -26,6 +28,7 @@ export default function Profile() {
       setDisplayName(
         user?.user_metadata?.first_name ||
         user?.user_metadata?.f_name ||
+        user?.user_metadata?.contact_name ||
         user?.email?.split("@")[0] ||
         "there"
       );
@@ -115,6 +118,15 @@ export default function Profile() {
 
       <Button
         mode="outlined"
+        onPress={() => router.push("/change-password" as any)}
+        style={styles.passwordButton}
+        labelStyle={styles.passwordLabel}
+      >
+        Change Password
+      </Button>
+
+      <Button
+        mode="outlined"
         onPress={handleLogout}
         style={styles.logoutButton}
         labelStyle={styles.logoutLabel}
@@ -193,5 +205,15 @@ const styles = StyleSheet.create({
   },
   logoutLabel: {
     color: Colors.error,
+  },
+    passwordButton: {
+    width: "100%",
+    borderRadius: 8,
+    borderColor: "#E6A23C",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  passwordLabel: {
+    color: "#E6A23C",
   },
 });
