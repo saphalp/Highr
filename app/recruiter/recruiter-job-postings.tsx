@@ -123,17 +123,7 @@ export default function RecruiterJobPostings() {
       scrollEventThrottle={16}
     >
       <Text style={styles.title}>My Job Postings</Text>
-=======
-    <ScrollView>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={26} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>My Job Postings</Text>
-        <View style={{ width: 34 }} />
-      </View>
->>>>>>> 4a6996d... feat: fix swipe logic, refresh on focus, styled cards and tab bar
-      
+
       <Button
         mode="contained"
         style={styles.createButton}
@@ -191,8 +181,6 @@ export default function RecruiterJobPostings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16, },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, },
-  backButton: { padding: 4, },
   title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', textAlign: 'center', },
   createButton: { backgroundColor: Colors.primary, marginBottom: 24, borderRadius: 8, padding: 4, },
   createButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 16, },

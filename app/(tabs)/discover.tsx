@@ -181,9 +181,6 @@ const DEMO_APPLICANTS: ApplicantCardData[] = [
     job_posting_id: "demo-job-1",
     applied_for: "Frontend Engineer",
   },
-];
-
-const DEMO_APPLICANTS: ApplicantCardData[] = [
   {
     id: "demo-app-2",
     f_name: "Jamie",
@@ -464,26 +461,30 @@ export default function Discover() {
     setOverlayType(type);
     overlayOpacity.setValue(0);
     overlayScale.setValue(0.5);
-    Animated.parallel([
-      Animated.spring(overlayScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      doSwipe();
+
+    doSwipe();
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(overlayScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(250),
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 350,
+        duration: 300,
         useNativeDriver: true,
-      }).start(() => setOverlayType(null));
-    });
+      }),
+    ]).start(() => setOverlayType(null));
   };
 
   useFocusEffect(
@@ -959,34 +960,25 @@ export default function Discover() {
               cards={filteredDisplayJobs}
               renderCard={(posting) => <JobPostingCard posting={posting} />}
               onSwipedRight={(i) => {
+                flashSwipeOverlay("like");
                 const swipedJob = filteredDisplayJobs[i];
-
-                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
-                  return;
-                }
-
-                const realJobIndex = jobPostings.findIndex(
-                  (job) => job.id === swipedJob.id,
-                );
-
-                if (realJobIndex !== -1) {
-                  handleJobSwipeRight(realJobIndex);
-                }
+                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) return;
+                const realJobIndex = jobPostings.findIndex((job) => job.id === swipedJob.id);
+                if (realJobIndex !== -1) handleJobSwipeRight(realJobIndex);
               }}
               onSwipedLeft={(i) => {
+                flashSwipeOverlay("pass");
                 const swipedJob = filteredDisplayJobs[i];
-
-                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
-                  return;
-                }
-
-                const realJobIndex = jobPostings.findIndex(
-                  (job) => job.id === swipedJob.id,
-                );
-
-                if (realJobIndex !== -1) {
-                  handleJobSwipeLeft(realJobIndex);
-                }
+                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) return;
+                const realJobIndex = jobPostings.findIndex((job) => job.id === swipedJob.id);
+                if (realJobIndex !== -1) handleJobSwipeLeft(realJobIndex);
+              }}
+              onSwipedTop={(i) => {
+                flashSwipeOverlay("super");
+                const swipedJob = filteredDisplayJobs[i];
+                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) return;
+                const realJobIndex = jobPostings.findIndex((job) => job.id === swipedJob.id);
+                if (realJobIndex !== -1) handleJobSwipeRight(realJobIndex);
               }}
               onSwipedAll={() => setAllSwiped(true)}
               backgroundColor="transparent"
@@ -1008,14 +1000,12 @@ export default function Discover() {
               />
             )}
             onSwipedRight={(i) => {
-              if (i >= DEMO_APPLICANTS.length) {
-                handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
-              }
+              flashSwipeOverlay("like");
+              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedLeft={(i) => {
-              if (i >= DEMO_APPLICANTS.length) {
-                handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
-              }
+              flashSwipeOverlay("pass");
+              if (i >= DEMO_APPLICANTS.length) handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
             }}
             onSwipedTop={(i) => {
               flashSwipeOverlay("super");
@@ -1084,11 +1074,17 @@ export default function Discover() {
           <Ionicons name="close" size={32} color="#FF6B6B" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.superLikeButton} onPress={swipeTop}>
+        <TouchableOpacity
+          style={styles.superLikeButton}
+          onPress={() => triggerSwipe("super", swipeTop)}
+        >
           <Ionicons name="star" size={24} color="#00C9FF" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.likeButton} onPress={swipeRight}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => triggerSwipe("like", swipeRight)}
+        >
           <Ionicons name="heart" size={32} color={Colors.text} />
         </TouchableOpacity>
       </View>
@@ -1272,7 +1268,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   swiperContainer: {
-    height: height * 0.62 + 36,
+    height: height * 0.55,
+    zIndex: 1,
   },
   demoBanner: {
     flexDirection: "row",
@@ -1346,8 +1343,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 24,
-    paddingBottom: 36,
-    paddingTop: 16,
+    paddingBottom: 16,
+    paddingTop: 88,
+    zIndex: 20,
   },
   passButton: {
     width: 64,
