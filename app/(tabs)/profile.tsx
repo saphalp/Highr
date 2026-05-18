@@ -6,11 +6,6 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Text } from "react-native-paper";
 
 export default function Profile() {
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  };
-
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
@@ -22,13 +17,6 @@ export default function Profile() {
       } = await supabase.auth.getUser();
 
       setRole(user?.user_metadata?.role || null);
-      setEmail(user?.email || "");
-      setDisplayName(
-        user?.user_metadata?.first_name ||
-        user?.user_metadata?.f_name ||
-        user?.email?.split("@")[0] ||
-        "there"
-      );
     };
 
     getUserRole();
@@ -37,14 +25,30 @@ export default function Profile() {
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
 
-  const hour = new Date().getHours();
+    if (error) {
+      console.log("Logout error:", error.message);
+      return;
+    }
 
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    router.replace("/login");
+  };
 
-  const roleLabel = isEmployer ? "Recruiter" : isApplicant ? "Applicant" : "User";
+  const handleEditProfile = () => {
+    if (isApplicant) {
+      router.push("/applicant/edit-profile-applicant");
+      return;
+    }
 
+    if (isEmployer) {
+      router.push("/recruiter/edit-profile-recruiter");
+      return;
+    }
+
+    router.push("/role-selection");
+  };
 
   return (
     <ScrollView
@@ -71,14 +75,8 @@ export default function Profile() {
 
       <Button
         mode="contained"
-        onPress={() => {
-          if (isApplicant) {
-            router.push("/applicant/edit-profile-applicant");
-          } else if (isEmployer) {
-            router.push("/recruiter/edit-profile-recruiter");
-          }
-        }}
-        style={styles.actionButton}
+        onPress={handleEditProfile}
+        style={styles.editButton}
       >
         Edit Profile
       </Button>
@@ -87,7 +85,7 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/recruiter/recruiter-job-postings")}
-          style={styles.actionButton}
+          style={styles.editButton}
         >
           My Job Postings
         </Button>
@@ -97,18 +95,16 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/preview-card" as any)}
-          style={styles.actionButton}
+          style={styles.editButton}
         >
           Preview Card
         </Button>
       )}
 
-      <Text style={styles.sectionTitle}>Account</Text>
-
       <Button
         mode="outlined"
         onPress={() => router.push("/terms-and-conditions")}
-        style={styles.actionButton}
+        style={styles.termsButton}
       >
         Terms and Conditions
       </Button>
@@ -184,6 +180,10 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 8,
     marginBottom: 12,
+  },
+  termsButton: {
+    width: "100%",
+    borderRadius: 8,
   },
   logoutButton: {
     width: "100%",
