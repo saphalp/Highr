@@ -238,11 +238,13 @@ export default function Discover() {
         )}
       </View>
 
-      <SwipeActionButtons
-        onPass={onPassPress}
-        onSuperLike={onSuperLikePress}
-        onLike={onLikePress}
-      />
+      <View style={styles.buttonsAbsolute} pointerEvents="box-none">
+        <SwipeActionButtons
+          onPass={onPassPress}
+          onSuperLike={onSuperLikePress}
+          onLike={onLikePress}
+        />
+      </View>
 
       <FilterModal
         visible={filterVisible}
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  swiperContainer: { height: height * 0.62 + 36 },
+  swiperContainer: { height: height * 0.62 + 36, zIndex: 1, overflow: "hidden" },
   demoBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -335,6 +337,14 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   emptyText: { color: Colors.text, fontSize: 18, fontWeight: "600" },
   emptySubtext: { color: Colors.textMuted, fontSize: 14 },
+  buttonsAbsolute: {
+    position: "absolute",
+    bottom: -10,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    elevation: 50,
+  },
   swipeOverlay: {
     position: "absolute",
     top: 0, left: 0, right: 0, bottom: 0,
