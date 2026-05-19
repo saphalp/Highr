@@ -9,7 +9,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Dimensions,
+  Modal,
+  ScrollView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -22,6 +27,60 @@ export type ApplicantCardData = ApplicantRow & {
 };
 
 type UserRole = "applicant" | "employer" | "unknown";
+
+const US_STATES = [
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+  "Remote",
+];
 
 // ── Demo cards shown when no real data is available ──────────────────────────
 const DEMO_JOB_POSTINGS: JobPostingRow[] = [
@@ -207,6 +266,24 @@ const OVERLAY_LABELS = {
       },
     },
   },
+  top: {
+    title: "SUPER LIKE",
+    style: {
+      label: {
+        backgroundColor: "#00C9FF",
+        color: "white",
+        fontSize: 24,
+        borderRadius: 8,
+        padding: 8,
+      },
+      wrapper: {
+        flexDirection: "column" as const,
+        alignItems: "center" as const,
+        justifyContent: "flex-start" as const,
+        marginTop: 20,
+      },
+    },
+  },
 };
 
 async function ensureConversationExists(
@@ -225,6 +302,7 @@ async function ensureConversationExists(
     .select("id")
     .eq("applicant_id", applicantId)
     .eq("employer_id", employerId);
+
   if (jobPostingId) matchQuery = matchQuery.eq("job_posting_id", jobPostingId);
   else matchQuery = matchQuery.is("job_posting_id", null);
 
@@ -303,8 +381,82 @@ export default function Discover() {
     unknown
   > | null>(null);
 
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [minPay, setMinPay] = useState("");
+
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
+
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const overlayScale = useRef(new Animated.Value(0.5)).current;
+  const [overlayType, setOverlayType] = useState<
+    keyof typeof SWIPE_OVERLAYS | null
+  >(null);
+  const buttonSwipePending = useRef(false);
+
+  const flashSwipeOverlay = (type: keyof typeof SWIPE_OVERLAYS) => {
+    if (buttonSwipePending.current) {
+      buttonSwipePending.current = false;
+      return;
+    }
+    setOverlayType(type);
+    overlayOpacity.setValue(0);
+    overlayScale.setValue(0.8);
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(overlayScale, {
+          toValue: 1,
+          friction: 6,
+          tension: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(300),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setOverlayType(null));
+  };
+
+  const triggerSwipe = (
+    type: keyof typeof SWIPE_OVERLAYS,
+    doSwipe: () => void,
+  ) => {
+    buttonSwipePending.current = true;
+    setOverlayType(type);
+    overlayOpacity.setValue(0);
+    overlayScale.setValue(0.5);
+    Animated.parallel([
+      Animated.spring(overlayScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      doSwipe();
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }).start(() => setOverlayType(null));
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -324,6 +476,7 @@ export default function Discover() {
         }
 
         setCurrentUserId(user.id);
+
         const userRole: UserRole = user.user_metadata?.role ?? "unknown";
         setRole(userRole);
 
@@ -346,6 +499,7 @@ export default function Discover() {
             .filter(Boolean) as string[];
 
           let query = supabase.from("job_postings").select("*");
+
           if (swipedIds.length > 0) {
             query = query.not("id", "in", `(${swipedIds.join(",")})`);
           }
@@ -353,7 +507,6 @@ export default function Discover() {
           const { data } = await query;
           setJobPostings((data as JobPostingRow[]) ?? []);
         } else if (userRole === "employer") {
-          // fetch applicants who swiped right on employer's jobs but employer hasn't responded
           const { data: pendingSwipes, error: swipesError } = await supabase
             .from("swipes")
             .select("applicant_id, job_posting_id")
@@ -426,7 +579,6 @@ export default function Discover() {
 
   const handleJobSwipeRight = async (index: number) => {
     const posting = jobPostings[index];
-    if (!currentUserId) return;
 
     console.log(
       "[SwipeRight] applicant:",
@@ -449,13 +601,11 @@ export default function Discover() {
 
     console.log("[SwipeRight] write error:", error?.message ?? "none");
 
-    // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
       console.error("Swipe upsert failed:", error.message);
       return;
     }
 
-    // Only show match popup if employer already swiped right on this applicant
     const { data } = await supabase
       .from("swipes")
       .select("employer_dir")
@@ -474,7 +624,11 @@ export default function Discover() {
 
   const handleJobSwipeLeft = (index: number) => {
     if (!currentUserId) return;
+
     const posting = jobPostings[index];
+
+    if (!posting) return;
+
     supabase
       .from("swipes")
       .upsert(
@@ -491,9 +645,9 @@ export default function Discover() {
       });
   };
 
-  // Employers only see applicants who already swiped right, so a right swipe is always a match
   const handleApplicantSwipeRight = async (index: number) => {
     if (!currentUserId) return;
+
     const applicant = applicants[index];
 
     const { error } = await supabase.from("swipes").upsert(
@@ -506,7 +660,6 @@ export default function Discover() {
       { onConflict: "applicant_id,employer_id,job_posting_id" },
     );
 
-    // 23505 = unique_violation: swipe already exists, which is fine — proceed
     if (error && error.code !== "23505") {
       console.error("Swipe upsert failed:", error.message);
       return;
@@ -519,6 +672,7 @@ export default function Discover() {
     );
 
     const name = `${applicant.f_name ?? ""} ${applicant.l_name ?? ""}`.trim();
+
     setMatchName(name || "this applicant");
     setMatchDetail(
       applicant.applied_for ?? applicant.experience?.[0]?.title ?? "",
@@ -528,7 +682,11 @@ export default function Discover() {
 
   const handleApplicantSwipeLeft = (index: number) => {
     if (!currentUserId) return;
+
     const applicant = applicants[index];
+
+    if (!applicant) return;
+
     supabase
       .from("swipes")
       .upsert(
@@ -596,6 +754,137 @@ export default function Discover() {
     else applicantSwiperRef.current?.swipeRight();
   };
 
+  const toggleValue = (
+    value: string,
+    selectedValues: string[],
+    setSelectedValues: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => {
+    if (selectedValues.includes(value)) {
+      setSelectedValues(selectedValues.filter((item) => item !== value));
+    } else {
+      setSelectedValues([...selectedValues, value]);
+    }
+  };
+
+  const resetFilterUI = () => {
+    setSearchText("");
+    setFilterLocation("");
+    setSelectedSkills([]);
+    setMinPay("");
+    setAllSwiped(false);
+    setRefreshKey((k) => k + 1);
+  };
+
+  const applyFilterUI = () => {
+    setAllSwiped(false);
+    setRefreshKey((k) => k + 1);
+    setFilterVisible(false);
+  };
+
+  const renderFilterChips = (
+    options: string[],
+    selectedValues: string[],
+    setSelectedValues: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => {
+    return (
+      <View style={styles.filterChipWrap}>
+        {options.map((option) => {
+          const selected = selectedValues.includes(option);
+
+          return (
+            <TouchableOpacity
+              key={option}
+              style={[styles.filterChip, selected && styles.filterChipSelected]}
+              onPress={() =>
+                toggleValue(option, selectedValues, setSelectedValues)
+              }
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selected && styles.filterChipTextSelected,
+                ]}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const getNumberFromSalary = (salary: string | number | undefined | null) => {
+    if (!salary) return 0;
+
+    if (typeof salary === "number") return salary;
+
+    const salaryText = salary.toLowerCase();
+    const numbers = salaryText.match(/\d+/g);
+
+    if (!numbers) return 0;
+
+    const firstNumber = Number(numbers[0]);
+
+    if (salaryText.includes("k")) {
+      return firstNumber * 1000;
+    }
+
+    return firstNumber;
+  };
+
+  const jobMatchesFilters = (job: JobPostingRow) => {
+    const search = searchText.toLowerCase().trim();
+    const selectedLocation = filterLocation.toLowerCase().trim();
+
+    const jobName = job.job_name?.toLowerCase() ?? "";
+    const companyName = job.company_name?.toLowerCase() ?? "";
+    const location = job.location?.toLowerCase() ?? "";
+    const description = job.description?.toLowerCase() ?? "";
+
+    const matchesSearch =
+      search === "" ||
+      jobName.includes(search) ||
+      companyName.includes(search) ||
+      location.includes(search) ||
+      description.includes(search);
+
+    const matchesLocation =
+      selectedLocation === "" || location.includes(selectedLocation);
+
+    const jobSkills = Array.isArray(job.skills)
+      ? job.skills.map((skill) => String(skill).toLowerCase())
+      : [];
+
+    const matchesSkills =
+      selectedSkills.length === 0 ||
+      selectedSkills.some((skill) => {
+        const selectedSkill = skill.toLowerCase();
+
+        return jobSkills.some(
+          (jobSkill) =>
+            jobSkill.includes(selectedSkill) ||
+            selectedSkill.includes(jobSkill),
+        );
+      });
+
+    const minPayNumber = Number(minPay);
+    const jobPayNumber = getNumberFromSalary(job.salary);
+
+    const matchesPay =
+      minPay.trim() === "" ||
+      (!Number.isNaN(minPayNumber) && jobPayNumber >= minPayNumber);
+
+    return matchesSearch && matchesLocation && matchesSkills && matchesPay;
+  };
+
+  const locationSuggestions =
+    filterLocation.trim().length === 0
+      ? []
+      : US_STATES.filter((state) =>
+          state.toLowerCase().startsWith(filterLocation.toLowerCase()),
+        ).slice(0, 6);
+
   const welcomeText =
     role === "applicant"
       ? "Find your next opportunity"
@@ -604,6 +893,8 @@ export default function Discover() {
         : "Discover";
 
   const displayJobs = [...DEMO_JOB_POSTINGS, ...jobPostings];
+  const filteredDisplayJobs = displayJobs.filter(jobMatchesFilters);
+
   const displayApplicants = [...DEMO_APPLICANTS, ...applicants];
 
   return (
@@ -613,13 +904,26 @@ export default function Discover() {
           <Text style={styles.logo}>Highr</Text>
           <Text style={styles.welcome}>{welcomeText}</Text>
         </View>
-        <TouchableOpacity style={styles.notifButton}>
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color={Colors.text}
-          />
-        </TouchableOpacity>
+
+        <View style={styles.headerActions}>
+          {role === "applicant" && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterVisible(true)}
+            >
+              <Ionicons name="options-outline" size={19} color={Colors.text} />
+              <Text style={styles.filterButtonText}>Filter</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={styles.notifButton}>
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={Colors.text}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.swiperContainer}>
@@ -692,6 +996,7 @@ export default function Discover() {
             stackSize={3}
             cardIndex={0}
             cardVerticalMargin={0}
+            cardStyle={{ height: height * 0.62 }}
             overlayLabels={OVERLAY_LABELS}
           />
         ) : (
@@ -701,17 +1006,174 @@ export default function Discover() {
         )}
       </View>
 
+      {overlayType && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.swipeOverlay,
+            { opacity: overlayOpacity, transform: [{ scale: overlayScale }] },
+          ]}
+        >
+          <View
+            style={[
+              styles.swipeOverlayBadge,
+              { borderColor: SWIPE_OVERLAYS[overlayType].color },
+            ]}
+          >
+            <View style={styles.swipeIconWrapper}>
+              <View
+                style={[
+                  styles.swipeIconBg,
+                  { backgroundColor: SWIPE_OVERLAYS[overlayType].iconBg },
+                ]}
+              />
+              <Ionicons
+                name={SWIPE_OVERLAYS[overlayType].icon}
+                size={56}
+                color={SWIPE_OVERLAYS[overlayType].iconColor}
+              />
+            </View>
+            <Text
+              style={[
+                styles.swipeOverlayText,
+                { color: SWIPE_OVERLAYS[overlayType].color },
+              ]}
+            >
+              {SWIPE_OVERLAYS[overlayType].label}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.passButton} onPress={swipeLeft}>
+        <TouchableOpacity
+          style={styles.passButton}
+          onPress={() => triggerSwipe("pass", swipeLeft)}
+        >
           <Ionicons name="close" size={32} color="#FF6B6B" />
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.superLikeButton} onPress={swipeTop}>
           <Ionicons name="star" size={24} color="#00C9FF" />
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.likeButton} onPress={swipeRight}>
           <Ionicons name="heart" size={32} color={Colors.text} />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={filterVisible} transparent animationType="slide">
+        <View style={styles.filterOverlay}>
+          <View style={styles.filterSheet}>
+            <View style={styles.filterHandle} />
+
+            <View style={styles.filterHeader}>
+              <View>
+                <Text style={styles.filterTitle}>Filter Jobs</Text>
+                <Text style={styles.filterSubtitle}>
+                  Search by keyword, location, skills, or pay
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.filterCloseButton}
+                onPress={() => setFilterVisible(false)}
+              >
+                <Ionicons name="close" size={20} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Search</Text>
+                <TextInput
+                  placeholder="Search title, company, or keyword"
+                  placeholderTextColor={Colors.textMuted}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  style={styles.filterInput}
+                />
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Location</Text>
+
+                <TextInput
+                  placeholder="Start typing a state or Remote"
+                  placeholderTextColor={Colors.textMuted}
+                  value={filterLocation}
+                  onChangeText={setFilterLocation}
+                  style={styles.filterInput}
+                />
+
+                {locationSuggestions.length > 0 && (
+                  <View style={styles.locationSuggestionBox}>
+                    {locationSuggestions.map((state) => (
+                      <TouchableOpacity
+                        key={state}
+                        style={styles.locationSuggestionItem}
+                        onPress={() => setFilterLocation(state)}
+                      >
+                        <Text style={styles.locationSuggestionText}>
+                          {state}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Skills</Text>
+                {renderFilterChips(
+                  [
+                    "React",
+                    "React Native",
+                    "TypeScript",
+                    "JavaScript",
+                    "Python",
+                    "SQL",
+                    "Node.js",
+                    "Cybersecurity",
+                    "Cloud",
+                    "Figma",
+                  ],
+                  selectedSkills,
+                  setSelectedSkills,
+                )}
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Minimum Pay</Text>
+                <TextInput
+                  placeholder="Example: 15 or 40000"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="numeric"
+                  value={minPay}
+                  onChangeText={setMinPay}
+                  style={styles.filterInput}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.filterFooter}>
+              <TouchableOpacity
+                style={styles.filterResetButton}
+                onPress={resetFilterUI}
+              >
+                <Text style={styles.filterResetText}>Reset</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.filterApplyButton}
+                onPress={applyFilterUI}
+              >
+                <Text style={styles.filterApplyText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <MatchPopup
         visible={matchVisible}
@@ -761,6 +1223,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  filterButton: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  filterButtonText: {
+    color: Colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   notifButton: {
     width: 40,
     height: 40,
@@ -770,7 +1254,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   swiperContainer: {
-    flex: 1,
+    height: height * 0.62 + 36,
   },
   demoBanner: {
     flexDirection: "row",
@@ -799,6 +1283,45 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: Colors.textMuted,
     fontSize: 14,
+  },
+  swipeOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  swipeOverlayBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 24,
+    borderRadius: 24,
+    borderWidth: 3,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    minWidth: 160,
+  },
+  swipeIconWrapper: {
+    position: "relative",
+    width: 72,
+    height: 72,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  swipeIconBg: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  swipeOverlayText: {
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
   buttonRow: {
     flexDirection: "row",
@@ -843,5 +1366,147 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
+  },
+  filterOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
+  },
+  filterSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+    maxHeight: "88%",
+  },
+  filterHandle: {
+    width: 46,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: Colors.outline,
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+  filterHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 22,
+  },
+  filterTitle: {
+    color: Colors.text,
+    fontSize: 26,
+    fontWeight: "800",
+  },
+  filterSubtitle: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
+  },
+  filterCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterSectionTitle: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+    fontSize: 15,
+    backgroundColor: Colors.surface,
+    color: Colors.text,
+  },
+  locationSuggestionBox: {
+    marginTop: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  locationSuggestionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outline,
+  },
+  locationSuggestionText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  filterChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    backgroundColor: Colors.surface,
+  },
+  filterChipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterChipText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterChipTextSelected: {
+    color: Colors.text,
+  },
+  filterFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outline,
+  },
+  filterResetButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.outline,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+  },
+  filterResetText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  filterApplyButton: {
+    flex: 2,
+    paddingVertical: 15,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+  },
+  filterApplyText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: "800",
   },
 });
