@@ -9,17 +9,14 @@ import {
   DEMO_APPLICANTS,
   DEMO_JOB_POSTINGS,
   OVERLAY_LABELS,
-  SWIPE_OVERLAYS,
 } from "@/constants/discover";
 import { Colors } from "@/constants/theme";
 import { useDiscoverData } from "@/hooks/useDiscoverData";
 import { useJobFilters } from "@/hooks/useJobFilters";
-import { useSwipeOverlay } from "@/hooks/useSwipeOverlay";
 import { Ionicons } from "@expo/vector-icons";
 import { useRef } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Dimensions,
   StyleSheet,
   TouchableOpacity,
@@ -73,9 +70,6 @@ export default function Discover() {
     jobMatchesFilters,
     reset: resetFilters,
   } = useJobFilters();
-
-  const { overlayOpacity, overlayScale, overlayType, flashSwipeOverlay, triggerSwipe } =
-    useSwipeOverlay();
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
@@ -161,17 +155,14 @@ export default function Discover() {
                 <JobPostingCard posting={posting} onAiPress={() => handleAiPress(posting)} />
               )}
               onSwipedRight={(i) => {
-                flashSwipeOverlay("like");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
               }}
               onSwipedLeft={(i) => {
-                flashSwipeOverlay("pass");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
               }}
               onSwipedTop={(i) => {
-                flashSwipeOverlay("super");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
               }}
@@ -192,17 +183,14 @@ export default function Discover() {
               <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
             )}
             onSwipedRight={(i) => {
-              flashSwipeOverlay("like");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedLeft={(i) => {
-              flashSwipeOverlay("pass");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
             }}
             onSwipedTop={(i) => {
-              flashSwipeOverlay("super");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
@@ -221,41 +209,10 @@ export default function Discover() {
         )}
       </View>
 
-      {overlayType && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.swipeOverlay,
-            { opacity: overlayOpacity, transform: [{ scale: overlayScale }] },
-          ]}
-        >
-          <View
-            style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}
-          >
-            <View style={styles.swipeIconWrapper}>
-              <View
-                style={[
-                  styles.swipeIconBg,
-                  { backgroundColor: SWIPE_OVERLAYS[overlayType].iconBg },
-                ]}
-              />
-              <Ionicons
-                name={SWIPE_OVERLAYS[overlayType].icon}
-                size={56}
-                color={SWIPE_OVERLAYS[overlayType].iconColor}
-              />
-            </View>
-            <Text style={[styles.swipeOverlayText, { color: SWIPE_OVERLAYS[overlayType].color }]}>
-              {SWIPE_OVERLAYS[overlayType].label}
-            </Text>
-          </View>
-        </Animated.View>
-      )}
-
       <SwipeActionButtons
-        onPass={() => triggerSwipe("pass", swipeLeft)}
-        onSuperLike={() => triggerSwipe("super", swipeTop)}
-        onLike={() => triggerSwipe("like", swipeRight)}
+        onPass={swipeLeft}
+        onSuperLike={swipeTop}
+        onLike={swipeRight}
       />
 
       <FilterModal
@@ -349,34 +306,4 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   emptyText: { color: Colors.text, fontSize: 18, fontWeight: "600" },
   emptySubtext: { color: Colors.textMuted, fontSize: 14 },
-  swipeOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999,
-  },
-  swipeOverlayBadge: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    borderRadius: 24,
-    borderWidth: 3,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    minWidth: 160,
-  },
-  swipeIconWrapper: {
-    position: "relative",
-    width: 72,
-    height: 72,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  swipeIconBg: { position: "absolute", width: 56, height: 56, borderRadius: 28 },
-  swipeOverlayText: { fontSize: 22, fontWeight: "800", letterSpacing: 2 },
 });
