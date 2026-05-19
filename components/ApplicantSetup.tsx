@@ -44,7 +44,7 @@ export default function ApplicantSetup() {
       if (profile.profileImageUri) {
         const file = new File(profile.profileImageUri);
         const bytes = await file.bytes();
-        const storagePath = `/applicants/1.jpeg`;
+        const storagePath = `applicants/${user.id}.jpeg`;
         const { error: uploadError } = await supabase.storage
           .from("profile_pictures")
           .upload(storagePath, bytes, {

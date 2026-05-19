@@ -1,12 +1,7 @@
 import ApplicantCard, { ApplicantRow } from "@/components/ApplicantCard";
-
-export type ApplicantCardData = ApplicantRow & {
-  job_posting_id: string;
-  applied_for?: string;
-};
-
 import JobPostingCard, { JobPostingRow } from "@/components/JobPostingCard";
 import MatchPopup from "@/components/MatchPopup";
+import SummaryModal, { SummaryData } from "@/components/SummaryModal";
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,31 +21,10 @@ import {
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
 
-const { height } = Dimensions.get("window");
-
-const SWIPE_OVERLAYS = {
-  pass: {
-    color: "#FF6B6B",
-    icon: "close-circle" as const,
-    iconColor: "#FF6B6B",
-    iconBg: "#000000",
-    label: "PASS",
-  },
-  like: {
-    color: Colors.primary,
-    icon: "heart-circle" as const,
-    iconColor: Colors.primary,
-    iconBg: "#ffffff",
-    label: "LIKE",
-  },
-  super: {
-    color: "#00C9FF",
-    icon: "star" as const,
-    iconColor: "#00C9FF",
-    iconBg: "transparent",
-    label: "SUPER LIKE",
-  },
-} as const;
+export type ApplicantCardData = ApplicantRow & {
+  job_posting_id: string;
+  applied_for?: string;
+};
 
 type UserRole = "applicant" | "employer" | "unknown";
 
@@ -334,10 +308,8 @@ async function ensureConversationExists(
 
   const { data: existingMatch, error: selectError } =
     await matchQuery.maybeSingle();
-
-  if (selectError) {
+  if (selectError)
     console.error("[ensureConversation] match select error:", selectError);
-  }
 
   let match = existingMatch;
 
@@ -352,11 +324,8 @@ async function ensureConversationExists(
       })
       .select("id")
       .single();
-
-    if (insertError) {
+    if (insertError)
       console.error("[ensureConversation] match insert error:", insertError);
-    }
-
     match = created;
   }
 
@@ -368,24 +337,20 @@ async function ensureConversationExists(
     .select("id")
     .eq("match_id", match.id)
     .maybeSingle();
-
-  if (convSelectError) {
+  if (convSelectError)
     console.error("[ensureConversation] conv select error:", convSelectError);
-  }
 
   if (!existing) {
     const { error: convInsertError } = await supabase
       .from("conversations")
       .insert({ match_id: match.id });
-
-    if (convInsertError) {
+    if (convInsertError)
       console.error("[ensureConversation] conv insert error:", convInsertError);
-    } else {
+    else
       console.log(
         "[ensureConversation] conversation created for match",
         match.id,
       );
-    }
   } else {
     console.log(
       "[ensureConversation] conversation already exists:",
@@ -403,8 +368,18 @@ export default function Discover() {
   const [matchVisible, setMatchVisible] = useState(false);
   const [matchName, setMatchName] = useState("");
   const [matchDetail, setMatchDetail] = useState("");
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [summaryStatus, setSummaryStatus] = useState<
+    "loading" | "success" | "error"
+  >("loading");
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [summaryError, setSummaryError] = useState("");
   const [allSwiped, setAllSwiped] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [userProfile, setUserProfile] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   const [filterVisible, setFilterVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -495,7 +470,6 @@ export default function Discover() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-
         if (!user) {
           setLoading(false);
           return;
@@ -507,6 +481,14 @@ export default function Discover() {
         setRole(userRole);
 
         if (userRole === "applicant") {
+          const { data: profile } = await supabase
+            .from("Applicant")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          setUserProfile(profile ?? null);
+
+          // fetch jobs this applicant hasn't swiped on yet
           const { data: swipedRows } = await supabase
             .from("swipes")
             .select("job_posting_id")
@@ -523,7 +505,6 @@ export default function Discover() {
           }
 
           const { data } = await query;
-
           setJobPostings((data as JobPostingRow[]) ?? []);
         } else if (userRole === "employer") {
           const { data: pendingSwipes, error: swipesError } = await supabase
@@ -548,7 +529,6 @@ export default function Discover() {
           const applicantIds = [
             ...new Set(pendingSwipes.map((s) => s.applicant_id)),
           ];
-
           const jobPostingIds = [
             ...new Set(
               pendingSwipes
@@ -569,11 +549,9 @@ export default function Discover() {
             const profile = (profiles ?? []).find(
               (a) => a.id === swipe.applicant_id,
             );
-
             const job = (jobNames ?? []).find(
               (j) => j.id === swipe.job_posting_id,
             );
-
             return {
               id: swipe.applicant_id,
               f_name: profile?.f_name ?? "Applicant",
@@ -601,8 +579,6 @@ export default function Discover() {
 
   const handleJobSwipeRight = async (index: number) => {
     const posting = jobPostings[index];
-
-    if (!currentUserId || !posting) return;
 
     console.log(
       "[SwipeRight] applicant:",
@@ -674,8 +650,6 @@ export default function Discover() {
 
     const applicant = applicants[index];
 
-    if (!applicant) return;
-
     const { error } = await supabase.from("swipes").upsert(
       {
         applicant_id: applicant.id,
@@ -727,6 +701,42 @@ export default function Discover() {
       .then(({ error }) => {
         if (error) console.error("Swipe upsert failed:", error.message);
       });
+  };
+
+  const handleAiPress = async (cardData: JobPostingRow | ApplicantCardData) => {
+    setSummaryVisible(true);
+    setSummaryStatus("loading");
+    setSummaryData(null);
+    setSummaryError("");
+    try {
+      const res = await fetch(
+        "https://n8n.saphalpant.com/webhook/f5060ba2-628d-4438-87ed-b8cd3ea956b2",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicantProfile: userProfile,
+            jobListing: cardData,
+          }),
+        },
+      );
+      if (!res.ok) {
+        setSummaryStatus("error");
+        setSummaryError(`Server error (${res.status}). Please try again.`);
+        return;
+      }
+      const json = await res.json().catch(() => null);
+      if (json?.success && json?.data) {
+        setSummaryData(json.data);
+        setSummaryStatus("success");
+      } else {
+        setSummaryStatus("error");
+        setSummaryError(json?.message ?? "Unexpected response from server.");
+      }
+    } catch (err) {
+      setSummaryStatus("error");
+      setSummaryError("Network error. Check your connection and try again.");
+    }
   };
 
   const swipeLeft = () => {
@@ -937,62 +947,31 @@ export default function Discover() {
             <Text style={styles.emptySubtext}>Check back later for more</Text>
           </View>
         ) : role === "applicant" ? (
-          filteredDisplayJobs.length === 0 ? (
-            <View style={styles.centered}>
-              <Ionicons
-                name="search-outline"
-                size={64}
-                color={Colors.textMuted}
+          <Swiper
+            key={`job-swiper-${refreshKey}`}
+            ref={jobSwiperRef}
+            cards={displayJobs}
+            renderCard={(posting) => (
+              <JobPostingCard
+                posting={posting}
+                onAiPress={() => handleAiPress(posting)}
               />
-              <Text style={styles.emptyText}>No jobs match your filters</Text>
-              <Text style={styles.emptySubtext}>
-                Try resetting or changing your filters
-              </Text>
-            </View>
-          ) : (
-            <Swiper
-              key={`job-swiper-${refreshKey}`}
-              ref={jobSwiperRef}
-              cards={filteredDisplayJobs}
-              renderCard={(posting) => <JobPostingCard posting={posting} />}
-              onSwipedRight={(i) => {
-                const swipedJob = filteredDisplayJobs[i];
-
-                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
-                  return;
-                }
-
-                const realJobIndex = jobPostings.findIndex(
-                  (job) => job.id === swipedJob.id,
-                );
-
-                if (realJobIndex !== -1) {
-                  handleJobSwipeRight(realJobIndex);
-                }
-              }}
-              onSwipedLeft={(i) => {
-                const swipedJob = filteredDisplayJobs[i];
-
-                if (!swipedJob || String(swipedJob.id).startsWith("demo-job")) {
-                  return;
-                }
-
-                const realJobIndex = jobPostings.findIndex(
-                  (job) => job.id === swipedJob.id,
-                );
-
-                if (realJobIndex !== -1) {
-                  handleJobSwipeLeft(realJobIndex);
-                }
-              }}
-              onSwipedAll={() => setAllSwiped(true)}
-              backgroundColor="transparent"
-              stackSize={3}
-              cardIndex={0}
-              cardVerticalMargin={0}
-              overlayLabels={OVERLAY_LABELS}
-            />
-          )
+            )}
+            onSwipedRight={(i) => {
+              if (i >= DEMO_JOB_POSTINGS.length)
+                handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
+            }}
+            onSwipedLeft={(i) => {
+              if (i >= DEMO_JOB_POSTINGS.length)
+                handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
+            }}
+            onSwipedAll={() => setAllSwiped(true)}
+            backgroundColor="transparent"
+            stackSize={3}
+            cardIndex={0}
+            cardVerticalMargin={0}
+            overlayLabels={OVERLAY_LABELS}
+          />
         ) : role === "employer" ? (
           <Swiper
             key={`applicant-swiper-${refreshKey}`}
@@ -1005,19 +984,12 @@ export default function Discover() {
               />
             )}
             onSwipedRight={(i) => {
-              if (i >= DEMO_APPLICANTS.length) {
-                handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
-              }
-            }}
-            onSwipedLeft={(i) => {
-              if (i >= DEMO_APPLICANTS.length) {
-                handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
-              }
-            }}
-            onSwipedTop={(i) => {
-              flashSwipeOverlay("super");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
+            }}
+            onSwipedLeft={(i) => {
+              if (i >= DEMO_APPLICANTS.length)
+                handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
             }}
             onSwipedAll={() => setAllSwiped(true)}
             backgroundColor="transparent"
@@ -1209,6 +1181,19 @@ export default function Discover() {
         detail={matchDetail}
         onKeepSwiping={() => setMatchVisible(false)}
         onSendMessage={() => setMatchVisible(false)}
+      />
+
+      <SummaryModal
+        visible={summaryVisible}
+        status={summaryStatus}
+        data={summaryData}
+        errorMessage={summaryError}
+        onClose={() => {
+          setSummaryVisible(false);
+          setSummaryStatus("loading");
+          setSummaryData(null);
+          setSummaryError("");
+        }}
       />
     </View>
   );
