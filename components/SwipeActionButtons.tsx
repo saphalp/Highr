@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
     gap: 24,
     paddingBottom: 36,
     paddingTop: 16,
+    zIndex: 20,
   },
   passButton: {
     width: 64,

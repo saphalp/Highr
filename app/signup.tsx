@@ -349,6 +349,7 @@ export default function SignupScreen() {
         Sign Up as Employer
       </Button>
 
+
       <MessageBar message={message} type={messageType} />
 
       <Text style={styles.loginLink}>
