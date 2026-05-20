@@ -6,71 +6,40 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Text } from "react-native-paper";
 
 export default function Profile() {
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  };
-
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
-  const [displayName, setDisplayName] = useState("there");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
-
+  const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
-    const getUserRole = async () => {
+    const loadUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
-      setRole(user?.user_metadata?.role || null);
-      setEmail(user?.email || "");
+      if (!user) return;
+      setRole(user.user_metadata?.role ?? null);
+      setEmail(user.email ?? "");
+      setDisplayName(user.user_metadata?.full_name ?? user.email ?? "");
     };
-
-    getUserRole();
+    loadUser();
   }, []);
 
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
 
-  const greeting = new Date().getHours() < 12
-    ? "Good morning"
-    : new Date().getHours() < 18
-    ? "Good afternoon"
-    : "Good evening";
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const roleLabel = isEmployer
-    ? "Employer"
-    : isApplicant
-    ? "Applicant"
-    : "Unknown";
+  const roleLabel = isEmployer ? "Recruiter" : isApplicant ? "Applicant" : "User";
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-
     if (error) {
       console.log("Logout error:", error.message);
       return;
     }
-
     router.replace("/login");
   };
-
-  const handleEditProfile = () => {
-    if (isApplicant) {
-      router.push("/applicant/edit-profile-applicant");
-      return;
-    }
-
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
-  const roleLabel = isEmployer
-    ? "Recruiter"
-    : isApplicant
-      ? "Applicant"
-      : "User";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -97,11 +66,8 @@ export default function Profile() {
       <Button
         mode="contained"
         onPress={() => {
-          if (isApplicant) {
-            router.push("/applicant/edit-profile-applicant");
-          } else if (isEmployer) {
-            router.push("/recruiter/edit-profile-recruiter");
-          }
+          if (isApplicant) router.push("/applicant/edit-profile-applicant");
+          else if (isEmployer) router.push("/recruiter/edit-profile-recruiter");
         }}
         style={styles.actionButton}
       >
@@ -178,14 +144,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
   },
-  roleChip: {
-    alignSelf: "flex-start",
-    backgroundColor: Colors.surface,
-  },
-  roleChipText: {
-    color: Colors.text,
-    fontWeight: "bold",
-  },
   summaryCard: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
@@ -214,15 +172,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 8,
   },
-  editButton: {
-    width: "100%",
-    borderRadius: 8,
-    marginBottom: 12,
-  },
   actionButton: {
     width: "100%",
     borderRadius: 8,
     marginBottom: 12,
+  },
+  passwordButton: {
+    width: "100%",
+    borderRadius: 8,
+    marginBottom: 12,
+    borderColor: Colors.outline,
+  },
+  passwordLabel: {
+    color: Colors.text,
   },
   logoutButton: {
     width: "100%",

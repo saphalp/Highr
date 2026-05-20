@@ -14,341 +14,23 @@ import {
 import { Colors } from "@/constants/theme";
 import { useDiscoverData } from "@/hooks/useDiscoverData";
 import { useJobFilters } from "@/hooks/useJobFilters";
+import { useSwipeOverlay } from "@/hooks/useSwipeOverlay";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
-  Modal,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
 
-const { height } = Dimensions.get('window');
-
-const SWIPE_OVERLAYS = {
-  pass:  { color: '#FF6B6B',      icon: 'close-circle'  as const, iconColor: '#FF6B6B', iconBg: '#000000',   label: 'PASS' },
-  like:  { color: Colors.primary, icon: 'heart-circle'  as const, iconColor: Colors.primary, iconBg: '#ffffff', label: 'LIKE' },
-  super: { color: '#00C9FF',      icon: 'star'          as const, iconColor: '#00C9FF', iconBg: 'transparent', label: 'SUPER LIKE' },
-} as const;
-
-type UserRole = "applicant" | "employer" | "unknown";
-
-const US_STATES = [
-  "Alabama",
-  "Alaska",
-  "Arizona",
-  "Arkansas",
-  "California",
-  "Colorado",
-  "Connecticut",
-  "Delaware",
-  "Florida",
-  "Georgia",
-  "Hawaii",
-  "Idaho",
-  "Illinois",
-  "Indiana",
-  "Iowa",
-  "Kansas",
-  "Kentucky",
-  "Louisiana",
-  "Maine",
-  "Maryland",
-  "Massachusetts",
-  "Michigan",
-  "Minnesota",
-  "Mississippi",
-  "Missouri",
-  "Montana",
-  "Nebraska",
-  "Nevada",
-  "New Hampshire",
-  "New Jersey",
-  "New Mexico",
-  "New York",
-  "North Carolina",
-  "North Dakota",
-  "Ohio",
-  "Oklahoma",
-  "Oregon",
-  "Pennsylvania",
-  "Rhode Island",
-  "South Carolina",
-  "South Dakota",
-  "Tennessee",
-  "Texas",
-  "Utah",
-  "Vermont",
-  "Virginia",
-  "Washington",
-  "West Virginia",
-  "Wisconsin",
-  "Wyoming",
-  "Remote",
-];
-
-// ── Demo cards shown when no real data is available ──────────────────────────
-const DEMO_JOB_POSTINGS: JobPostingRow[] = [
-  {
-    id: "demo-job-1",
-    employer_id: "demo-employer-1",
-    job_name: "Frontend Engineer",
-    company_name: "Stripe",
-    location: "San Francisco, CA",
-    salary: "$140k – $180k",
-    skills: ["React Native", "TypeScript", "GraphQL"],
-    description:
-      "Join our payments UI team building the interfaces that millions of developers depend on every day.",
-  },
-  {
-    id: "demo-job-2",
-    employer_id: "demo-employer-2",
-    job_name: "Product Designer",
-    company_name: "Figma",
-    location: "Remote",
-    salary: "$120k – $160k",
-    skills: ["Figma", "Prototyping", "User Research"],
-    description:
-      "Shape the future of collaborative design tools used by over 4 million teams worldwide.",
-  },
-  {
-    id: "demo-job-3",
-    employer_id: "demo-employer-3",
-    job_name: "Backend Engineer",
-    company_name: "Notion",
-    location: "New York, NY",
-    salary: "$130k – $170k",
-    skills: ["Node.js", "PostgreSQL", "Redis"],
-    description:
-      "Help us scale the infrastructure powering the all-in-one workspace for notes, docs, and projects.",
-  },
-];
-
-const DEMO_APPLICANTS: ApplicantCardData[] = [
-  {
-    id: "demo-app-1",
-    f_name: "Alex",
-    l_name: "Rivera",
-    address: "Austin, TX",
-    bio: "Full-stack developer with 4 years of experience building scalable web apps and mobile products.",
-    skills: [
-      { name: "React", level: "Expert" },
-      { name: "Node.js", level: "Advanced" },
-      { name: "Python", level: "Intermediate" },
-    ],
-    experience: [
-      {
-        company: "Shopify",
-        title: "Software Engineer",
-        location: "Remote",
-        startDate: "2021-06",
-        endDate: "",
-        current: true,
-        description: "",
-      },
-    ],
-    education: [
-      {
-        institution: "UT Austin",
-        degree: "B.S.",
-        field: "Computer Science",
-        startYear: "2017",
-        endYear: "2021",
-        current: false,
-      },
-    ],
-    job_posting_id: "demo-job-1",
-    applied_for: "Frontend Engineer",
-  },
-  {
-    id: "demo-app-2",
-    f_name: "Jamie",
-    l_name: "Chen",
-    address: "Seattle, WA",
-    bio: "UX-focused mobile engineer who loves turning complex problems into delightful user experiences.",
-    skills: [
-      { name: "Swift", level: "Expert" },
-      { name: "Kotlin", level: "Advanced" },
-      { name: "Figma", level: "Intermediate" },
-    ],
-    experience: [
-      {
-        company: "Amazon",
-        title: "Mobile Engineer",
-        location: "Seattle",
-        startDate: "2020-03",
-        endDate: "",
-        current: true,
-        description: "",
-      },
-    ],
-    education: [
-      {
-        institution: "University of Washington",
-        degree: "B.S.",
-        field: "Informatics",
-        startYear: "2016",
-        endYear: "2020",
-        current: false,
-      },
-    ],
-    job_posting_id: "demo-job-2",
-    applied_for: "Product Designer",
-  },
-  {
-    id: "demo-app-3",
-    f_name: "Morgan",
-    l_name: "Patel",
-    address: "Chicago, IL",
-    bio: "Data engineer passionate about pipelines, analytics, and making data accessible to everyone.",
-    skills: [
-      { name: "Python", level: "Expert" },
-      { name: "SQL", level: "Expert" },
-      { name: "Spark", level: "Advanced" },
-    ],
-    experience: [
-      {
-        company: "Grubhub",
-        title: "Data Engineer",
-        location: "Chicago",
-        startDate: "2019-07",
-        endDate: "",
-        current: true,
-        description: "",
-      },
-    ],
-    education: [
-      {
-        institution: "Northwestern",
-        degree: "M.S.",
-        field: "Data Science",
-        startYear: "2017",
-        endYear: "2019",
-        current: false,
-      },
-    ],
-    job_posting_id: "demo-job-3",
-    applied_for: "Backend Engineer",
-  },
-];
-
-const OVERLAY_LABELS = {
-  left: {
-    title: "PASS",
-    style: {
-      label: {
-        backgroundColor: "#FF6B6B",
-        color: "white",
-        fontSize: 24,
-        borderRadius: 8,
-        padding: 8,
-      },
-      wrapper: {
-        flexDirection: "column" as const,
-        alignItems: "flex-end" as const,
-        justifyContent: "flex-start" as const,
-        marginTop: 20,
-        marginLeft: -20,
-      },
-    },
-  },
-  right: {
-    title: "LIKE",
-    style: {
-      label: {
-        backgroundColor: Colors.primary,
-        color: "white",
-        fontSize: 24,
-        borderRadius: 8,
-        padding: 8,
-      },
-      wrapper: {
-        flexDirection: "column" as const,
-        alignItems: "flex-start" as const,
-        justifyContent: "flex-start" as const,
-        marginTop: 20,
-        marginLeft: 20,
-      },
-    },
-  },
-  top: {
-    title: "SUPER LIKE",
-    style: {
-      label: {
-        backgroundColor: "#00C9FF",
-        color: "white",
-        fontSize: 24,
-        borderRadius: 8,
-        padding: 8,
-      },
-      wrapper: {
-        flexDirection: "column" as const,
-        alignItems: "center" as const,
-        justifyContent: "flex-start" as const,
-        marginTop: 20,
-      },
-    },
-  },
-};
-
-async function ensureConversationExists(
-  applicantId: string,
-  employerId: string,
-  jobPostingId: string | null,
-) {
-  console.log("[ensureConversation] start", {
-    applicantId,
-    employerId,
-    jobPostingId,
-  });
-
-  let matchQuery = supabase
-    .from("matches")
-    .select("id")
-    .eq("applicant_id", applicantId)
-    .eq("employer_id", employerId);
-
-  if (jobPostingId) matchQuery = matchQuery.eq("job_posting_id", jobPostingId);
-  else matchQuery = matchQuery.is("job_posting_id", null);
-
-  const { data: existingMatch, error: selectError } =
-    await matchQuery.maybeSingle();
-
-  if (selectError) {
-    console.error("[ensureConversation] match select error:", selectError);
-  }
-
-  let match = existingMatch;
-
-  if (!match) {
-    const { data: created, error: insertError } = await supabase
-      .from("matches")
-      .insert({
-        applicant_id: applicantId,
-        employer_id: employerId,
-        job_posting_id: jobPostingId,
-        status: "active",
-      })
-      .select("id")
-      .single();
-
-    if (insertError) {
-      console.error("[ensureConversation] match insert error:", insertError);
-    }
-
-    match = created;
-  }
-
-  console.log("[ensureConversation] match:", match);
-  if (!match) return;
+export type { ApplicantCardData };
 
 const { height } = Dimensions.get("window");
 
@@ -394,10 +76,50 @@ export default function Discover() {
     reset: resetFilters,
   } = useJobFilters();
 
-  const { overlayOpacity, overlayScale, overlayType, flashSwipeOverlay, triggerSwipe } = useSwipeOverlay();
+  const { overlayOpacity, overlayScale, overlayType, flashSwipeOverlay, triggerSwipe } =
+    useSwipeOverlay();
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const loadNotificationPreference = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !role || role === "unknown") return;
+    const tableName = role === "employer" ? "Employer" : "Applicant";
+    const { data, error } = await supabase
+      .from(tableName)
+      .select("notifications")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error) { console.log("Error loading notifications:", error); return; }
+    setNotificationsEnabled(data?.notifications ?? true);
+  };
+
+  const toggleNotifications = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !role || role === "unknown") return;
+    const tableName = role === "employer" ? "Employer" : "Applicant";
+    const newValue = !notificationsEnabled;
+    const { error } = await supabase
+      .from(tableName)
+      .update({ notifications: newValue })
+      .eq("id", user.id);
+    if (error) {
+      Alert.alert("Error", "Could not update notification setting.");
+      return;
+    }
+    setNotificationsEnabled(newValue);
+  };
+
+  useEffect(() => {
+    loadNotificationPreference();
+  }, [role]);
 
   const swipeLeft = () => {
     if (role === "applicant") jobSwiperRef.current?.swipeLeft();
@@ -414,58 +136,9 @@ export default function Discover() {
     else applicantSwiperRef.current?.swipeRight();
   };
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
-  const loadNotificationPreference = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user || !role) return;
-
-    const tableName = role === "employer" ? "Employer" : "Applicant";
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("notifications")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.log("Error loading notifications:", error);
-      return;
-    }
-
-    setNotificationsEnabled(data?.notifications ?? true);
-  };
-
-  const toggleNotifications = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user || !role) return;
-
-    const tableName = role === "employer" ? "Employer" : "Applicant";
-    const newValue = !notificationsEnabled;
-
-    const { error } = await supabase
-      .from(tableName)
-      .update({ notifications: newValue })
-      .eq("id", user.id);
-
-    if (error) {
-      Alert.alert("Error", "Could not update notification setting.");
-      console.log("Error updating notifications:", error);
-      return;
-    }
-
-    setNotificationsEnabled(newValue);
-  };
-
-  useEffect(() => {
-    loadNotificationPreference();
-  }, [role]);
+  const onPassPress = () => triggerSwipe("pass", swipeLeft);
+  const onSuperLikePress = () => triggerSwipe("super", swipeTop);
+  const onLikePress = () => triggerSwipe("like", swipeRight);
 
   const welcomeText =
     role === "applicant"
@@ -496,10 +169,10 @@ export default function Discover() {
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.notifButton} onPress={toggleNotifications}>
-            <Ionicons 
-              name={notificationsEnabled ? "notifications" : "notifications-off-outline"} 
-              size={22} 
-              color={Colors.text} 
+            <Ionicons
+              name={notificationsEnabled ? "notifications" : "notifications-off-outline"}
+              size={22}
+              color={Colors.text}
             />
           </TouchableOpacity>
         </View>
@@ -599,10 +272,19 @@ export default function Discover() {
         {overlayType && (
           <Animated.View
             pointerEvents="none"
-            style={[styles.swipeOverlay, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}
+            style={[
+              styles.swipeOverlay,
+              { opacity: overlayOpacity, transform: [{ scale: overlayScale }] },
+            ]}
           >
-            <View style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}>
-              <Ionicons name={SWIPE_OVERLAYS[overlayType].icon} size={64} color={SWIPE_OVERLAYS[overlayType].iconColor} />
+            <View
+              style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}
+            >
+              <Ionicons
+                name={SWIPE_OVERLAYS[overlayType].icon}
+                size={64}
+                color={SWIPE_OVERLAYS[overlayType].iconColor}
+              />
               <Text style={[styles.swipeOverlayText, { color: SWIPE_OVERLAYS[overlayType].color }]}>
                 {SWIPE_OVERLAYS[overlayType].label}
               </Text>
@@ -720,7 +402,10 @@ const styles = StyleSheet.create({
   },
   swipeOverlay: {
     position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 100,
