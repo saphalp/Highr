@@ -17,6 +17,7 @@ export default function Profile() {
       } = await supabase.auth.getUser();
 
       setRole(user?.user_metadata?.role || null);
+      setEmail(user?.email || "");
     };
 
     getUserRole();
@@ -24,6 +25,18 @@ export default function Profile() {
 
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
+
+  const greeting = new Date().getHours() < 12
+    ? "Good morning"
+    : new Date().getHours() < 18
+    ? "Good afternoon"
+    : "Good evening";
+
+  const roleLabel = isEmployer
+    ? "Employer"
+    : isApplicant
+    ? "Applicant"
+    : "Unknown";
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -175,6 +188,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
     marginTop: 8,
+  },
+  editButton: {
+    width: "100%",
+    borderRadius: 8,
+    marginBottom: 12,
   },
   actionButton: {
     width: "100%",

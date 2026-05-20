@@ -13,8 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
-  Animated,
   ActivityIndicator,
+  Animated,
+  Dimensions,
   Modal,
   ScrollView,
   StyleSheet,
@@ -23,9 +24,10 @@ import {
   View,
 } from "react-native";
 
-const { height } = Dimensions.get('window');
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
+
+const { height } = Dimensions.get('window');
 
 const SWIPE_OVERLAYS = {
   pass:  { color: '#FF6B6B',      icon: 'close-circle'  as const, iconColor: '#FF6B6B', iconBg: '#000000',   label: 'PASS' },

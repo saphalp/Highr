@@ -11,7 +11,7 @@ import { File } from "expo-file-system";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, ProgressBar, Text } from "react-native-paper";
+import { Button, HelperText, ProgressBar, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ApplicantAdditionalInfo from "./ProfileSetup/ApplicantAdditionalInfo";
 import ApplicantBasicInfo from "./ProfileSetup/ApplicantBasicInfo";
@@ -29,10 +29,53 @@ const STEP_LABELS = [
   "Additional Info",
 ];
 
+// Returns an error message string if validation fails, or null if valid.
+function validateStep(step: number, profile: ApplicantProfile): string | null {
+  switch (step) {
+    case 1: {
+      if (!profile.fName?.trim()) return "First name is required.";
+      if (!profile.lName?.trim()) return "Last name is required.";
+      if (!profile.phone?.trim()) return "Phone number is required.";
+      if (!profile.address?.trim()) return "Address is required.";
+      return null;
+    }
+    case 2: {
+      if (profile.education.length === 0)
+        return "Please add at least one education entry.";
+      return null;
+    }
+    case 3: {
+      if (profile.experience.length === 0)
+        return "Please add at least one experience entry.";
+      return null;
+    }
+    case 4: {
+      if (profile.skills.length === 0)
+        return "Please add at least one skill.";
+      return null;
+    }
+    case 5: {
+      if (!profile.bio?.trim()) return "Bio is required.";
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
 export default function ApplicantSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<ApplicantProfile>(EMPTY_PROFILE);
+  const [stepError, setStepError] = useState<string | null>(null);
+
   const handleNext = async () => {
+    const error = validateStep(step, profile);
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStepError(null);
+
     if (step === TOTAL_STEPS) {
       const {
         data: { user },
@@ -61,7 +104,7 @@ export default function ApplicantSetup() {
         profilePicUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from("Applicant").upsert({
+      const { error: saveError } = await supabase.from("Applicant").upsert({
         id: user.id,
         f_name: profile.fName,
         l_name: profile.lName,
@@ -77,8 +120,8 @@ export default function ApplicantSetup() {
         ...(profilePicUrl && { profile_pic: profilePicUrl }),
       });
 
-      if (error) {
-        console.error("Profile save failed:", error.message);
+      if (saveError) {
+        console.error("Profile save failed:", saveError.message);
         return;
       }
 
@@ -87,11 +130,14 @@ export default function ApplicantSetup() {
     }
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
+
   const handleBack = () => {
+    setStepError(null);
     setStep((s) => Math.max(s - 1, 1));
   };
 
   const updateProfile = (fields: Partial<ApplicantProfile>) => {
+    setStepError(null);
     setProfile((prev) => ({ ...prev, ...fields }));
   };
 
@@ -99,6 +145,7 @@ export default function ApplicantSetup() {
     key: K,
     entry: ApplicantProfile[K][number],
   ) => {
+    setStepError(null);
     setProfile((prev) => ({
       ...prev,
       [key]: [entry, ...prev[key]],
@@ -159,6 +206,12 @@ export default function ApplicantSetup() {
         {step === 5 && (
           <ApplicantAdditionalInfo data={profile} onChange={updateProfile} />
         )}
+
+        {stepError ? (
+          <HelperText type="error" visible style={styles.errorText}>
+            {stepError}
+          </HelperText>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -215,6 +268,10 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 32,
+  },
+  errorText: {
+    fontSize: 13,
+    marginTop: 8,
   },
   footer: {
     padding: 16,
