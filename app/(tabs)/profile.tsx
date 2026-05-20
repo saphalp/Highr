@@ -26,16 +26,6 @@ export default function Profile() {
 
       setRole(user?.user_metadata?.role || null);
       setEmail(user?.email || "");
-
-      const nameFromMetadata =
-        user?.user_metadata?.full_name ||
-        user?.user_metadata?.name ||
-        user?.user_metadata?.first_name ||
-        user?.user_metadata?.f_name ||
-        user?.user_metadata?.contact_name ||
-        "";
-
-      setDisplayName(nameFromMetadata);
     };
 
     getUserRole();
@@ -44,7 +34,34 @@ export default function Profile() {
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
 
-  const hour = new Date().getHours();
+  const greeting = new Date().getHours() < 12
+    ? "Good morning"
+    : new Date().getHours() < 18
+    ? "Good afternoon"
+    : "Good evening";
+
+  const roleLabel = isEmployer
+    ? "Employer"
+    : isApplicant
+    ? "Applicant"
+    : "Unknown";
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.log("Logout error:", error.message);
+      return;
+    }
+
+    router.replace("/login");
+  };
+
+  const handleEditProfile = () => {
+    if (isApplicant) {
+      router.push("/applicant/edit-profile-applicant");
+      return;
+    }
 
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -197,6 +214,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 8,
   },
+  editButton: {
+    width: "100%",
+    borderRadius: 8,
+    marginBottom: 12,
+  },
   actionButton: {
     width: "100%",
     borderRadius: 8,
@@ -210,36 +232,5 @@ const styles = StyleSheet.create({
   },
   logoutLabel: {
     color: Colors.error,
-  },
-    passwordButton: {
-    width: "100%",
-    borderRadius: 8,
-    borderColor: "#E6A23C",
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  passwordLabel: {
-    color: "#E6A23C",
-  },
-  settingRow: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  settingTitle: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  settingSubtitle: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginTop: 4,
   },
 });

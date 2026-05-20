@@ -5,7 +5,7 @@ import { File } from "expo-file-system";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, ProgressBar, Text } from "react-native-paper";
+import { Button, HelperText, ProgressBar, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EmployerAdditionalInfo from "./ProfileSetup/EmployerAdditionalInfo";
 import EmployerBasicInfo from "./ProfileSetup/EmployerBasicInfo";
@@ -20,13 +20,57 @@ const STEP_LABELS = [
   "Additional Info",
 ];
 
+// Required:  contactName, contactTitle, contactPhone
+// Required:  companyName, industry, companySize
+// Optional:  website, about
+// Required:  city, country, workTypes
+// Optional:  linkedin, culture
+function validateStep(step: number, profile: EmployerProfile): string | null {
+  switch (step) {
+    case 1: {
+      if (!profile.contactName?.trim()) return "Contact name is required.";
+      if (!profile.contactTitle?.trim()) return "Contact title is required.";
+      if (!profile.contactPhone?.trim()) return "Contact phone is required.";
+      return null;
+    }
+    case 2: {
+      if (!profile.companyName?.trim()) return "Company name is required.";
+      if (!profile.industry?.trim()) return "Industry is required.";
+      if (!profile.companySize?.trim()) return "Company size is required.";
+      // website and about are optional
+      return null;
+    }
+    case 3: {
+      if (!profile.city?.trim()) return "City is required.";
+      if (!profile.country?.trim()) return "Country is required.";
+      if (!profile.workTypes || profile.workTypes.length === 0)
+        return "Please select at least one work type.";
+      return null;
+    }
+    case 4: {
+      // linkedin and culture are optional — step 4 always passes
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
 export default function EmployerSetup() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<EmployerProfile>(
     EMPTY_EMPLOYER_PROFILE,
   );
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const handleNext = async () => {
+    const error = validateStep(step, profile);
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStepError(null);
+
     if (step === TOTAL_STEPS) {
       const {
         data: { user },
@@ -55,7 +99,7 @@ export default function EmployerSetup() {
         logoUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from("Employer").upsert({
+      const { error: saveError } = await supabase.from("Employer").upsert({
         id: user.id,
         contact_name: profile.contactName,
         contact_title: profile.contactTitle,
@@ -75,8 +119,8 @@ export default function EmployerSetup() {
         ...(logoUrl && { logo: logoUrl }),
       });
 
-      if (error) {
-        console.error("Profile save failed:", error.message);
+      if (saveError) {
+        console.error("Profile save failed:", saveError.message);
         return;
       }
 
@@ -85,9 +129,14 @@ export default function EmployerSetup() {
     }
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
-  const handleBack = () => setStep((s) => Math.max(s - 1, 1));
+
+  const handleBack = () => {
+    setStepError(null);
+    setStep((s) => Math.max(s - 1, 1));
+  };
 
   const updateProfile = (fields: Partial<EmployerProfile>) => {
+    setStepError(null);
     setProfile((prev) => ({ ...prev, ...fields }));
   };
 
@@ -123,6 +172,12 @@ export default function EmployerSetup() {
         {step === 4 && (
           <EmployerAdditionalInfo data={profile} onChange={updateProfile} />
         )}
+
+        {stepError ? (
+          <HelperText type="error" visible style={styles.errorText}>
+            {stepError}
+          </HelperText>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -184,6 +239,10 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 32,
+  },
+  errorText: {
+    fontSize: 13,
+    marginTop: 8,
   },
   footer: {
     padding: 16,
