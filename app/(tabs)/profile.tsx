@@ -6,9 +6,17 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Text } from "react-native-paper";
 
 export default function Profile() {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+
 
   useEffect(() => {
     const getUserRole = async () => {
@@ -55,21 +63,21 @@ export default function Profile() {
       return;
     }
 
-    if (isEmployer) {
-      router.push("/recruiter/edit-profile-recruiter");
-      return;
-    }
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-    router.push("/role-selection");
-  };
+  const roleLabel = isEmployer
+    ? "Recruiter"
+    : isApplicant
+      ? "Applicant"
+      : "User";
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>{greeting}, {displayName}</Text>
+        <Text style={styles.greeting}>
+          {displayName ? `${greeting}, ${displayName}` : `${greeting}!`}
+        </Text>
       </View>
 
       <Card style={styles.summaryCard}>
@@ -88,8 +96,14 @@ export default function Profile() {
 
       <Button
         mode="contained"
-        onPress={handleEditProfile}
-        style={styles.editButton}
+        onPress={() => {
+          if (isApplicant) {
+            router.push("/applicant/edit-profile-applicant");
+          } else if (isEmployer) {
+            router.push("/recruiter/edit-profile-recruiter");
+          }
+        }}
+        style={styles.actionButton}
       >
         Edit Profile
       </Button>
@@ -98,7 +112,7 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/recruiter/recruiter-job-postings")}
-          style={styles.editButton}
+          style={styles.actionButton}
         >
           My Job Postings
         </Button>
@@ -108,18 +122,29 @@ export default function Profile() {
         <Button
           mode="contained"
           onPress={() => router.push("/preview-card" as any)}
-          style={styles.editButton}
+          style={styles.actionButton}
         >
           Preview Card
         </Button>
       )}
 
+      <Text style={styles.sectionTitle}>Account</Text>
+
       <Button
         mode="outlined"
         onPress={() => router.push("/terms-and-conditions")}
-        style={styles.termsButton}
+        style={styles.actionButton}
       >
         Terms and Conditions
+      </Button>
+
+      <Button
+        mode="outlined"
+        onPress={() => router.push("/change-password" as any)}
+        style={styles.passwordButton}
+        labelStyle={styles.passwordLabel}
+      >
+        Change Password
       </Button>
 
       <Button
@@ -198,10 +223,6 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 8,
     marginBottom: 12,
-  },
-  termsButton: {
-    width: "100%",
-    borderRadius: 8,
   },
   logoutButton: {
     width: "100%",
