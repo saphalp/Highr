@@ -1,6 +1,6 @@
 import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "react-native-paper";
@@ -9,8 +9,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type Role = "applicant" | "employer" | null;
 
 export default function RoleSelectionScreen() {
-  const router = useRouter();
-
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [confirming, setConfirming] = useState(false);
 
@@ -25,7 +23,7 @@ export default function RoleSelectionScreen() {
       });
 
       if (error) {
-        console.error("Failed to save role:", error.message);
+        console.log("Failed to save role:", error.message);
         return;
       }
 
