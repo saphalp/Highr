@@ -40,22 +40,23 @@ export default function Profile() {
   const isEmployer = role === "employer";
   const isApplicant = role === "applicant";
 
-
   const hour = new Date().getHours();
 
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const roleLabel = isEmployer ? "Recruiter" : isApplicant ? "Applicant" : "User";
-
+  const roleLabel = isEmployer
+    ? "Recruiter"
+    : isApplicant
+      ? "Applicant"
+      : "User";
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>{greeting}, {displayName}</Text>
+        <Text style={styles.greeting}>
+          {greeting}, {displayName}
+        </Text>
       </View>
 
       <Card style={styles.summaryCard}>
