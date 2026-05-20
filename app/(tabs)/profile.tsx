@@ -15,6 +15,8 @@ export default function Profile() {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
 
+
+
   useEffect(() => {
     const getUserRole = async () => {
       const {
@@ -25,9 +27,10 @@ export default function Profile() {
       setEmail(user?.email || "");
       setDisplayName(
         user?.user_metadata?.first_name ||
-          user?.user_metadata?.f_name ||
-          user?.email?.split("@")[0] ||
-          "there",
+        user?.user_metadata?.f_name ||
+        user?.user_metadata?.contact_name ||
+        user?.email?.split("@")[0] ||
+        "there"
       );
     };
 
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
   logoutLabel: {
     color: Colors.error,
   },
-  passwordButton: {
+    passwordButton: {
     width: "100%",
     borderRadius: 8,
     borderColor: "#E6A23C",
