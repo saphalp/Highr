@@ -9,6 +9,7 @@ import {
   DEMO_APPLICANTS,
   DEMO_JOB_POSTINGS,
   OVERLAY_LABELS,
+  SWIPE_OVERLAYS,
 } from "@/constants/discover";
 import { Colors } from "@/constants/theme";
 import { useDiscoverData } from "@/hooks/useDiscoverData";
@@ -70,6 +71,8 @@ export default function Discover() {
     jobMatchesFilters,
     reset: resetFilters,
   } = useJobFilters();
+
+  const { overlayOpacity, overlayScale, overlayType, flashSwipeOverlay, triggerSwipe } = useSwipeOverlay();
 
   const jobSwiperRef = useRef<Swiper<JobPostingRow>>(null);
   const applicantSwiperRef = useRef<Swiper<ApplicantCardData>>(null);
@@ -212,14 +215,17 @@ export default function Discover() {
                 <JobPostingCard posting={posting} onAiPress={() => handleAiPress(posting)} />
               )}
               onSwipedRight={(i) => {
+                flashSwipeOverlay("like");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
               }}
               onSwipedLeft={(i) => {
+                flashSwipeOverlay("pass");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeLeft(i - DEMO_JOB_POSTINGS.length);
               }}
               onSwipedTop={(i) => {
+                flashSwipeOverlay("super");
                 if (i >= DEMO_JOB_POSTINGS.length)
                   handleJobSwipeRight(i - DEMO_JOB_POSTINGS.length);
               }}
@@ -240,14 +246,17 @@ export default function Discover() {
               <ApplicantCard applicant={applicant} appliedFor={applicant.applied_for} />
             )}
             onSwipedRight={(i) => {
+              flashSwipeOverlay("like");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
             onSwipedLeft={(i) => {
+              flashSwipeOverlay("pass");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeLeft(i - DEMO_APPLICANTS.length);
             }}
             onSwipedTop={(i) => {
+              flashSwipeOverlay("super");
               if (i >= DEMO_APPLICANTS.length)
                 handleApplicantSwipeRight(i - DEMO_APPLICANTS.length);
             }}
@@ -264,13 +273,29 @@ export default function Discover() {
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         )}
+
+        {overlayType && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.swipeOverlay, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}
+          >
+            <View style={[styles.swipeOverlayBadge, { borderColor: SWIPE_OVERLAYS[overlayType].color }]}>
+              <Ionicons name={SWIPE_OVERLAYS[overlayType].icon} size={64} color={SWIPE_OVERLAYS[overlayType].iconColor} />
+              <Text style={[styles.swipeOverlayText, { color: SWIPE_OVERLAYS[overlayType].color }]}>
+                {SWIPE_OVERLAYS[overlayType].label}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
       </View>
 
-      <SwipeActionButtons
-        onPass={swipeLeft}
-        onSuperLike={swipeTop}
-        onLike={swipeRight}
-      />
+      <View style={styles.buttonsAbsolute} pointerEvents="box-none">
+        <SwipeActionButtons
+          onPass={onPassPress}
+          onSuperLike={onSuperLikePress}
+          onLike={onLikePress}
+        />
+      </View>
 
       <FilterModal
         visible={filterVisible}
@@ -349,7 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  swiperContainer: { height: height * 0.62 + 36 },
+  swiperContainer: { height: height * 0.62 + 36, zIndex: 1, overflow: "hidden" },
   demoBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -363,4 +388,32 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   emptyText: { color: Colors.text, fontSize: 18, fontWeight: "600" },
   emptySubtext: { color: Colors.textMuted, fontSize: 14 },
+  buttonsAbsolute: {
+    position: "absolute",
+    bottom: -10,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    elevation: 50,
+  },
+  swipeOverlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  swipeOverlayBadge: {
+    borderWidth: 4,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  swipeOverlayText: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: 8,
+    letterSpacing: 2,
+  },
 });

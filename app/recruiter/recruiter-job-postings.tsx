@@ -123,7 +123,7 @@ export default function RecruiterJobPostings() {
       scrollEventThrottle={16}
     >
       <Text style={styles.title}>My Job Postings</Text>
-      
+
       <Button
         mode="contained"
         style={styles.createButton}
@@ -181,7 +181,7 @@ export default function RecruiterJobPostings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 16, },
-  title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center', },
+  title: { color: Colors.text, fontSize: 24, fontWeight: 'bold', textAlign: 'center', },
   createButton: { backgroundColor: Colors.primary, marginBottom: 24, borderRadius: 8, padding: 4, },
   createButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 16, },
   card: { backgroundColor: Colors.surface, marginBottom: 16, },

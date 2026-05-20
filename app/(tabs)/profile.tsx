@@ -16,6 +16,8 @@ export default function Profile() {
   const [displayName, setDisplayName] = useState("there");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
+
+
   useEffect(() => {
     const getUserRole = async () => {
       const {
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
   logoutLabel: {
     color: Colors.error,
   },
-  passwordButton: {
+    passwordButton: {
     width: "100%",
     borderRadius: 8,
     borderColor: "#E6A23C",

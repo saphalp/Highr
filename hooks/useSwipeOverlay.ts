@@ -44,26 +44,28 @@ export function useSwipeOverlay() {
     setOverlayType(type);
     overlayOpacity.setValue(0);
     overlayScale.setValue(0.5);
-    Animated.parallel([
-      Animated.spring(overlayScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      doSwipe();
+    doSwipe();
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(overlayScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(200),
       Animated.timing(overlayOpacity, {
         toValue: 0,
         duration: 350,
         useNativeDriver: true,
-      }).start(() => setOverlayType(null));
-    });
+      }),
+    ]).start(() => setOverlayType(null));
   };
 
   return { overlayOpacity, overlayScale, overlayType, flashSwipeOverlay, triggerSwipe };
