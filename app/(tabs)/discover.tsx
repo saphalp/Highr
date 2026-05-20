@@ -14,16 +14,14 @@ import {
 import { Colors } from "@/constants/theme";
 import { useDiscoverData } from "@/hooks/useDiscoverData";
 import { useJobFilters } from "@/hooks/useJobFilters";
-import { useSwipeOverlay } from "@/hooks/useSwipeOverlay";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
+  ActivityIndicator, Alert, Dimensions,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import Swiper from "react-native-deck-swiper";
 import { Text } from "react-native-paper";
@@ -94,9 +92,58 @@ export default function Discover() {
     else applicantSwiperRef.current?.swipeRight();
   };
 
-  const onPassPress = () => triggerSwipe("pass", swipeLeft);
-  const onSuperLikePress = () => triggerSwipe("super", swipeTop);
-  const onLikePress = () => triggerSwipe("like", swipeRight);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const loadNotificationPreference = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || !role) return;
+
+    const tableName = role === "employer" ? "Employer" : "Applicant";
+
+    const { data, error } = await supabase
+      .from(tableName)
+      .select("notifications")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.log("Error loading notifications:", error);
+      return;
+    }
+
+    setNotificationsEnabled(data?.notifications ?? true);
+  };
+
+  const toggleNotifications = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || !role) return;
+
+    const tableName = role === "employer" ? "Employer" : "Applicant";
+    const newValue = !notificationsEnabled;
+
+    const { error } = await supabase
+      .from(tableName)
+      .update({ notifications: newValue })
+      .eq("id", user.id);
+
+    if (error) {
+      Alert.alert("Error", "Could not update notification setting.");
+      console.log("Error updating notifications:", error);
+      return;
+    }
+
+    setNotificationsEnabled(newValue);
+  };
+
+  useEffect(() => {
+    loadNotificationPreference();
+  }, [role]);
 
   const welcomeText =
     role === "applicant"
@@ -126,8 +173,12 @@ export default function Discover() {
               <Text style={styles.filterButtonText}>Filter</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.notifButton}>
-            <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+          <TouchableOpacity style={styles.notifButton} onPress={toggleNotifications}>
+            <Ionicons 
+              name={notificationsEnabled ? "notifications" : "notifications-off-outline"} 
+              size={22} 
+              color={Colors.text} 
+            />
           </TouchableOpacity>
         </View>
       </View>

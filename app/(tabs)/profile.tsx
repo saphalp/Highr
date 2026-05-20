@@ -14,6 +14,7 @@ export default function Profile() {
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("there");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
 
 
@@ -25,13 +26,16 @@ export default function Profile() {
 
       setRole(user?.user_metadata?.role || null);
       setEmail(user?.email || "");
-      setDisplayName(
+
+      const nameFromMetadata =
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
         user?.user_metadata?.first_name ||
         user?.user_metadata?.f_name ||
         user?.user_metadata?.contact_name ||
-        user?.email?.split("@")[0] ||
-        "there"
-      );
+        "";
+
+      setDisplayName(nameFromMetadata);
     };
 
     getUserRole();
@@ -55,7 +59,7 @@ export default function Profile() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.greeting}>
-          {greeting}, {displayName}
+          {displayName ? `${greeting}, ${displayName}` : `${greeting}!`}
         </Text>
       </View>
 
@@ -216,5 +220,26 @@ const styles = StyleSheet.create({
   },
   passwordLabel: {
     color: "#E6A23C",
+  },
+  settingRow: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  settingTitle: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
+  settingSubtitle: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
   },
 });

@@ -12,12 +12,17 @@ export default function CreateJobScreen() {
 
   const [jobName, setJobName] = useState("");
   const [description, setDescription] = useState("");
-  const [skills, setSkills] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
   const [location, setLocation] = useState("");
   const [company, setCompany] = useState("");
   const [pay, setPay] = useState("");
 
   const handleSubmit = async () => {
+    if (pay.trim() && isNaN(Number(pay.trim()))) {
+      Alert.alert("Invalid pay", "Estimated pay must be numbers only.");
+      return;
+    }
     if (!jobName.trim() || !company.trim()) {
       Alert.alert("Missing fields", "Job name and company name are required.");
       return;
@@ -32,16 +37,11 @@ export default function CreateJobScreen() {
       return;
     }
 
-    const skillsArray = skills
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const { error } = await supabase.from("job_postings").insert({
       employer_id: user.id,
       job_name: jobName.trim(),
       description: description.trim(),
-      skills: skillsArray,
+      skills: skills,
       location: location.trim(),
       company_name: company.trim(),
       salary: pay.trim() ? Number(pay.trim()) : null,
@@ -85,16 +85,6 @@ export default function CreateJobScreen() {
         />
 
         <TextInput
-          label="Relevant Skills (comma separated)"
-          mode="outlined"
-          value={skills}
-          onChangeText={setSkills}
-          style={styles.input}
-          textColor={Colors.text}
-          theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
-        />
-
-        <TextInput
           label="Location"
           mode="outlined"
           value={location}
@@ -115,14 +105,51 @@ export default function CreateJobScreen() {
         />
 
         <TextInput
-          label="Estimated Pay"
+          label="Estimated Pay (numbers only)"
+          placeholder="e.g. 85000"
           mode="outlined"
           value={pay}
           onChangeText={setPay}
+          keyboardType="numeric"
+          style={styles.input}
+          textColor={Colors.text}
+          theme={{
+            colors: {
+              primary: Colors.primary,
+              onSurfaceVariant: Colors.textMuted,
+            },
+          }}
+        />
+
+        <Text style={styles.helperText}>
+          Enter the dollar amount only — no $ or commas.
+        </Text>
+
+        <TextInput
+          label="Relevant Skill(s)"
+          mode="outlined"
+          value={skillInput}
+          onChangeText={setSkillInput}
           style={styles.input}
           textColor={Colors.text}
           theme={{ colors: { primary: Colors.primary, onSurfaceVariant: Colors.textMuted } }}
         />
+
+        <Button
+          mode="outlined"
+          onPress={() => {
+            if (!skillInput.trim()) return;
+
+            setSkills([...skills, skillInput.trim()]);
+            setSkillInput("");
+          }}
+        >
+          Add Skill
+        </Button>
+
+        <Text style={styles.currentList}>
+          Current Skills: {skills.length > 0 ? skills.join(", ") : "None"}
+        </Text>
 
         <View style={styles.buttonRow}>
           <Button
@@ -161,4 +188,6 @@ const styles = StyleSheet.create({
   backButton : { flex: 1, borderRadius : 8, backgroundColor: Colors.primary, padding: 4 },
   submitButton : { flex: 1, borderRadius : 8, backgroundColor: Colors.primary, padding: 4 },
   backButtonText : { color: Colors.text, fontWeight: 'bold', fontSize: 16 },
+  currentList : { color: Colors.textMuted, marginTop: 10, fontStyle: 'italic' },
+  helperText : { color: Colors.textMuted, fontSize: 12, marginTop: -6, marginBottom: 12, fontStyle: 'italic' },
 });
